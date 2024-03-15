@@ -1,1 +1,1 @@
-Welcome to the Content Commitment protocol project !!!
+Welcom to the project
