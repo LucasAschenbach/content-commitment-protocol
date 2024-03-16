@@ -60,6 +60,7 @@ def printRoots(size):
     resC.append(floatToFix(i[0]))
     resS.append(floatToFix(i[1]))
   print(resC)
+  print("")
   print(resS)
 
 def createGaussian(size):
@@ -112,11 +113,15 @@ def arrAsFix(arr):
     res.append(floatToFix(i))
   return res
 
-size = 32
-
-print(reverseBits(5))
-printRoots(size)
-print(arrAsFix(createLowPass(size)))
+  
+bits = 5
+size = 1<<5
 print(arrAsFix(createLowPassExp(size, 10)))
+print("")
+printRoots(size)
+print("")
+print(reverseBits(bits))
+
+
 
 

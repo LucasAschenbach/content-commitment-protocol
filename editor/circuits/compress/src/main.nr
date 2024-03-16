@@ -1,16 +1,15 @@
 use dep::std::println;
 
-global sizeDFT = 32;
 global logConst = 5;
-global logConstInc = 6;
-global overlap = sizeDFT/4;//512;
+global sizeDFT = 32;
+global logConstInc = logConst+1;
+global overlap = sizeDFT/4;
 global lowpass : [i64; sizeDFT] = [16777216, 16777216, 16777216, 16777216, 16777216, 16777216, 16777216, 16777216, 16777216, 4806752, 1377157, 394562, 113043, 32387, 9279, 2658, 761, 2658, 9279, 32387, 113043, 394562, 1377157, 4806752, 16777216, 16777216, 16777216, 16777216, 16777216, 16777216, 16777216, 16777216];
 global rootsReal : [i64; sizeDFT] = [16777216, 16454846, 15500126, 13949745, 11863283, 9320921, 6420362, 3273072, 0, -3273072, -6420362, -9320921, -11863283, -13949745, -15500126, -16454846, -16777216, -16454846, -15500126, -13949745, -11863283, -9320921, -6420362, -3273072, 0, 3273072, 6420362, 9320921, 11863283, 13949745, 15500126, 16454846];
 global rootsImg : [i64; sizeDFT] = [0, -3273072, -6420362, -9320921, -11863283, -13949745, -15500126, -16454846, -16777216, -16454846, -15500126, -13949745, -11863283, -9320921, -6420362, -3273072, 0, 3273072, 6420362, 9320921, 11863283, 13949745, 15500126, 16454846, 16777216, 16454846, 15500126, 13949745, 11863283, 9320921, 6420362, 3273072];
-global zeroC : Complex = Complex{real : FixPoint{data : 0}, img : FixPoint {data : 0}};
 global lookupReverse : [u64; sizeDFT] = [0, 16, 8, 24, 4, 20, 12, 28, 2, 18, 10, 26, 6, 22, 14, 30, 1, 17, 9, 25, 5, 21, 13, 29, 3, 19, 11, 27, 7, 23, 15, 31];
 
-
+global zeroC : Complex = Complex{real : FixPoint{data : 0}, img : FixPoint {data : 0}};
 //first 24bits are decimal places
 struct FixPoint{
     data : i64
@@ -130,7 +129,6 @@ fn dft<N>(data: [Complex; N]) -> [Complex; N]{
         let mut wm = sizeDFT >> i;      
         let m = 1 << i;
         let mh = 1 << (i-1);
-        //let rootMul = Complex::conj(Complex{real: FixPoint{data: rootsReal[wm]}, img: FixPoint{data: rootsImg[wm]}});
         for idx in 0..wm{
             let k = idx * m;
             let mut rootIdx = 0;
@@ -176,9 +174,7 @@ fn idft<N>(data: [Complex; N]) -> [Complex; N]{
     }
     bitReversed
 }
-//fn ridft(start: u64, end: u64){
-//    data
-//}
+
 fn calculateRounds(size : u64) -> u64 {
     let mut rounds = 1;
     let mut rmsize = size - sizeDFT;
@@ -193,7 +189,6 @@ fn calculateRounds(size : u64) -> u64 {
 fn downsample<M> (data : [i64; M]) -> ([i64; M], u64){
     let mut res : [i64; M] = [0; M];
     let mut cmplx : [Complex; M] = [zeroC; M];
-    //let mut last : [Complex; sizeDFT] = [zeroC; sizeDFT];
     let mut resCmplx : [Complex; M] = [zeroC; M];
     for i in 0..M{
         cmplx[i] = Complex{real: FixPoint::fromPCM16(data[i]), img: FixPoint::zero()};
@@ -215,14 +210,11 @@ fn downsample<M> (data : [i64; M]) -> ([i64; M], u64){
         for j in 0..sizeDFT{
             let idx = offset + j;
             if idx < M{
-                //println(chunk[j]);
                 if j < overlap & i > 0{ 
                     resCmplx[idx] = Complex::shift(Complex::add(resCmplx[idx],chunk[j]),1);  
                 }else{
                     resCmplx[idx] = Complex::add(resCmplx[idx], chunk[j]);
                 }
-                          
-                //resCmplx[idx] = Complex::add(resCmplx[idx], chunk[j]);
             }
         }
         offset += sizeDFT - overlap;
