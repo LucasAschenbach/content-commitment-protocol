@@ -1,0 +1,19 @@
+{
+  "0x0": {
+    "args": {},
+    "description": "init"
+  },
+  "0x1": {
+    "args": {
+      "start": "Field",
+      "end": "Field"
+    },
+    "description": "crop"
+  },
+  "0x2": {
+    "args": {
+      "rate": "Field"
+    },
+    "description": "compress"
+  }
+}

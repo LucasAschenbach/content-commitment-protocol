@@ -1,0 +1,23 @@
+{
+  "name": "noir-gen",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@noir-lang/backend_barretenberg": "^0.25.0",
+    "@noir-lang/noir_js": "^0.25.0",
+    "@noir-lang/noir_wasm": "^0.25.0",
+    "fs-extra": "^11.2.0"
+  },
+  "devDependencies": {
+    "@types/fs-extra": "^11.0.4",
+    "@types/node": "^20.11.28",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.2"
+  }
+}
