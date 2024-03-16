@@ -1,5 +1,5 @@
 [package]
-name = "compress"
+name = "Dft"
 type = "bin"
 authors = [""]
 compiler_version = ">=0.22.0"
