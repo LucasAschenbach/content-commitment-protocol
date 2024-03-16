@@ -63,13 +63,23 @@ fn zero() -> Complex{
     Complex{real: FixPoint::zero(), img: FixPoint::zero()}
 }
 
+fn rdft(data : &mut [Complex; 1024], start: u64, end: u64) -> &mut [Complex; 1024]{
+    data
+}
+fn ridft(data : &mut [Complex; 1024], start: u64, end: u64) -> &mut [Complex; 1024]{
+    data
+}
 
 fn dft(data : [Complex; 1024]) -> [Complex; 1024]{
     data
 
 }
-fn idft(data : [Complex; 1024]) -> [Complex; 1024]{
+fn idft(data : [Complex; 1024]) -> [Complex; 1024]{ //complex conjugate and 1/1024 as prefactor
     data
+}
+
+fn downsample<M> (data : [u64; M]) -> ([u64; M], u64){
+    (data, M as u64)
 }
 
 fn main(){
