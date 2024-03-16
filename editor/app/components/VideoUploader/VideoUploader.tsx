@@ -1,42 +1,89 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import styles from "./VideoUploader.module.css";
+const WaveFile = require("wavefile").WaveFile;
 
 export default function VideoUploader() {
-  const [videoFile, setVideoFile] = useState<File | null>(null);
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
-  const [bitrate, setBitrate] = useState("");
+  const [bitrate, setBitrate] = useState(96);
   const [outputDetails, setOutputDetails] = useState({
     duration: "00:00:00",
     size: "0 MB",
   });
+  const [proof, setProof] = useState("");
+  const [audioFile, setAudioFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [pcmData, setPcmData] = useState<ArrayBuffer | null>(null);
 
   const handleStartTimeChange = (e: React.ChangeEvent<HTMLInputElement>) =>
     setStartTime(e.target.value);
   const handleEndTimeChange = (e: React.ChangeEvent<HTMLInputElement>) =>
     setEndTime(e.target.value);
-  const handleBitrateChange = (e: React.ChangeEvent<HTMLInputElement>) =>
-    setBitrate(e.target.value);
-
-  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
+  // Bitrate buttons click handler
+  const handleBitrateButtonClick = (newBitrate: number) => {
+    setBitrate(newBitrate);
   };
 
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+  useEffect(() => {
+    // This effect runs whenever pcmData changes.
+    if (pcmData) {
+      console.log("PCM Data is set:", pcmData);
+      // Perform further actions with pcmData here
+    }
+  }, [pcmData]);
+
+  const handleFileChange = async (file: File) => {
+    setUploading(true);
+    setAudioFile(file);
+    console.log(file);
+    const reader = new FileReader();
+
+    reader.onload = async (e) => {
+      console.log("ArrayBuffer Size:", e.target!.result); // Ensuring the file is read
+      try {
+        const wav = new WaveFile();
+        wav.fromBuffer(new Uint8Array(e.target!.result as ArrayBuffer));
+        console.log("WAV File Loaded:", wav.container, wav.chunkSize); // Checking WAV properties
+        // Accessing the sample size (bit depth) of the WAV file
+        var sampleRate = wav.fmt.sampleRate;
+        sampleRate = sampleRate / 1000; // To have it in KHz
+        console.log("Sample Rate:", sampleRate, "KHz");
+        setBitrate(sampleRate);
+        const pcm = wav.getSamples(false, Int16Array);
+        console.log("PCM Data Length:", pcm.length); // Verifying PCM data length
+        setPcmData(pcm);
+      } catch (error) {
+        console.error("Error processing WAV file:", error);
+      } finally {
+        setUploading(false);
+      }
+    };
+    reader.onerror = (event) => {
+      console.error("FileReader error:", event.target!.error);
+    };
+
+    // Initiating the file reading process
+    reader.readAsArrayBuffer(file);
+  };
+
+  const handleDrop = async (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     const files = e.dataTransfer.files;
     if (files.length > 0) {
-      const file = files[0];
-      setVideoFile(file);
-      // Can also handle the file upload process here
+      await handleFileChange(files[0]);
     }
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const file = e.target.files[0];
-      setVideoFile(file);
-      // Handle the file upload process here
+  const handleDragOver = async (e: React.DragEvent<HTMLDivElement>) => {
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      await handleFileChange(files[0]);
+    }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      await handleFileChange(e.target.files[0]);
     }
   };
 
@@ -44,17 +91,17 @@ export default function VideoUploader() {
   const fileSizeInMB = (fileSize: number) =>
     (fileSize / (1024 * 1024)).toFixed(2);
 
-  // Placeholder function for processing video
-  const processVideo = () => {
-    // This function would actually call a backend API to process the video
-    // After processing, the backend would return the output video details
+  // Placeholder function for processing audio
+  const processAudio = () => {
+    // This function would actually call a backend API to process the audio
+    // After processing, the backend would return the output audio details
     // For e.g
     setOutputDetails({ duration: "01:30:00", size: "800 MB" });
   };
 
-  // Placeholder function for downloading video
-  const downloadVideo = () => {
-    // This function would provide the processed video file to the user for download
+  // This function would provide the processed audio file to the user for download
+  const downloadAudio = () => {
+    // Placeholder function for downloading audio
   };
 
   return (
@@ -67,24 +114,22 @@ export default function VideoUploader() {
         >
           <input
             type="file"
-            accept="video/*"
+            accept="audio/wav"
             onChange={handleFileUpload}
             className={styles.fileInput}
           />
-          {videoFile ? (
+          {audioFile ? (
             <div className={styles.fileDetails}>
               <span>
-                {videoFile.name} - {fileSizeInMB(videoFile.size)} MB
+                {audioFile.name} - {fileSizeInMB(audioFile.size)} MB
               </span>
               <br />
-              <button className="mt-4" onClick={() => setVideoFile(null)}>
-                Replace File
-              </button>
+              <button onClick={() => setAudioFile(null)}>Replace File</button>
             </div>
           ) : (
             <p>
-              Drag and drop a video file, or click to select one from your local
-              machine.
+              Drag and drop a WAV file, or click to select one from your
+              computer.
             </p>
           )}
         </div>
@@ -93,13 +138,14 @@ export default function VideoUploader() {
             readOnly
             className={styles.proofField}
             placeholder="Computational proof of the video will be displayed here after upload."
+            value={proof}
           />
         </div>
       </div>
       <div className={styles.editingControls}>
         <div className={styles.cropControl}>
           <label>
-            Start Time:
+            Start Time
             <input
               type="text"
               value={startTime}
@@ -107,24 +153,52 @@ export default function VideoUploader() {
             />
           </label>
           <label>
-            End Time:
+            End Time
             <input type="text" value={endTime} onChange={handleEndTimeChange} />
           </label>
         </div>
         <div className={styles.compressControl}>
-          <label>
-            Bitrate:
-            <input type="text" value={bitrate} onChange={handleBitrateChange} />
-          </label>
+          <label>Bitrate (in KHz)</label>
+          <div className={styles.bitrateButtonContainer}>
+            {/* Render bitrate buttons */}
+            <button
+              className={`${styles.bitrateButton} ${
+                bitrate === 96 ? styles.active : ""
+              }`}
+              onClick={() => handleBitrateButtonClick(96)}
+            >
+              96
+            </button>
+            <button
+              className={`${styles.bitrateButton} ${
+                bitrate === 48 ? styles.active : ""
+              }`}
+              onClick={() => handleBitrateButtonClick(48)}
+            >
+              48
+            </button>
+            <button
+              className={`${styles.bitrateButton} ${
+                bitrate === 24 ? styles.active : ""
+              }`}
+              onClick={() => handleBitrateButtonClick(24)}
+            >
+              24
+            </button>
+          </div>
         </div>
-        <button onClick={processVideo}>Process Video</button>
-        <div className={styles.outputDetails}>
-          <span>Duration: {outputDetails.duration}</span>
-          <span>Size: {outputDetails.size}</span>
-        </div>
-        <button className={styles.downloadButton} onClick={downloadVideo}>
-          Download
+        <button className={styles.processButton} onClick={processAudio}>
+          Process Audio
         </button>
+        <div className={styles.outputContainer}>
+          <div className={styles.outputDetails}>
+            <span>Duration: {outputDetails.duration}</span>
+            <span>Size: {outputDetails.size}</span>
+          </div>
+          <button className={styles.downloadButton} onClick={downloadAudio}>
+            Download
+          </button>
+        </div>
       </div>
     </div>
   );
