@@ -1,16 +1,9 @@
 use dep::std;
+use dep::audio_lib::transform::crop;
 
 global SIZE = 10; // size of the sound array
 global SIZE_OLD = 10; // size of the old sound array
-global PREV_OP_ARGS = 0; // size of the previous operation arguments
-
-fn crop<N,M>(sound_old: [Field; N], sound_new: [Field; M], start: Field, end: Field) {
-    assert(M - 1 == end - start);
-    let len: u32 = N as u32;
-    for i in 0..(len-1) {
-        assert(sound_new[i] == sound_old[start + i as Field]);
-    }
-}
+global LAST_OP_ARGS = 0; // size of the previous operation arguments
 
 fn main(
     // Commitment ----------------------------
@@ -26,18 +19,18 @@ fn main(
     // Previous proof data  ------------------
     verification_key: [Field; 114],
     proof: [Field; 93],
-    prev_op_args: [Field; PREV_OP_ARGS],
+    last_op_args: [Field; LAST_OP_ARGS],
     key_hash: Field,
     // ---------------------------------------
 ) {
     // merge com, sound_new, prev_inputs into a single array
-    let mut public_inputs = [0; 1 + SIZE_OLD + PREV_OP_ARGS];
+    let mut public_inputs = [0; 1 + SIZE_OLD + LAST_OP_ARGS];
     public_inputs[0] = com;
     for i in 1..SIZE_OLD {
         public_inputs[i] = sound_old[i];
     }
-    for i in SIZE_OLD+1..SIZE_OLD+PREV_OP_ARGS {
-        public_inputs[i] = prev_op_args[i];
+    for i in SIZE_OLD+1..SIZE_OLD+LAST_OP_ARGS {
+        public_inputs[i] = last_op_args[i];
     }
 
     // Verify original sound belongs to com
@@ -48,10 +41,13 @@ fn main(
         key_hash,
     );
 
-    assert(rate_new == rate_old);
-
     // Verify new sound is proper crop of old sound
-    crop(sound_old, sound_new, start, end);
+    assert(rate_new == rate_old);
+    assert(SIZE - 1 == end - start);
+    let len: u32 = SIZE as u32;
+    for i in 0..(len-1) {
+        assert(sound_new[i] == sound_old[start + i as Field]);
+    }
 }
 
 #[test]

@@ -1,13 +1,9 @@
 use dep::std;
+use dep::audio_lib::transform::compress;
 
 global SIZE = 100; // size of the sound array
 global SIZE_OLD = 100; // size of the old sound array
-global PREV_OP_ARGS = 0; // size of the previous operation arguments
-
-fn compress<N,M>(sound_old: [Field; N], rate_old: Field, sound_new: [Field; M], rate_new: Field, compression_power: Field) {
-    assert(N == M * 2.pow_32(compression_power))
-    // TODO
-}
+global LAST_OP_ARGS = 0; // size of the previous operation arguments
 
 fn main(
     // Commitment ----------------------------
@@ -22,18 +18,18 @@ fn main(
     // Previous proof data  ------------------
     verification_key : [Field; 114],
     proof : [Field; 93],
-    prev_op_args: [Field; PREV_OP_ARGS],
+    last_op_args: [Field; LAST_OP_ARGS],
     key_hash : Field,
     // ---------------------------------------
 ) {
     // merge com, sound_new, prev_inputs into a single array
-    let mut public_inputs = [0; 1 + SIZE_OLD + PREV_OP_ARGS];
+    let mut public_inputs = [0; 1 + SIZE_OLD + LAST_OP_ARGS];
     public_inputs[0] = com;
     for i in 1..SIZE_OLD {
         public_inputs[i] = sound_old[i];
     }
-    for i in SIZE_OLD+1..SIZE_OLD+PREV_OP_ARGS {
-        public_inputs[i] = prev_op_args[i];
+    for i in SIZE_OLD+1..SIZE_OLD+LAST_OP_ARGS {
+        public_inputs[i] = last_op_args[i];
     }
 
     // Verify original sound_old belongs to com
