@@ -1,15 +1,12 @@
 use dep::std;
 
-global SIZE = 10; // size of the sound array
-global SIZE_OLD = 10; // size of the old sound array
-global PREV_OP_ARGS = 0; // size of the previous operation arguments
+global SIZE = <%= content_size %>; // size of the sound array
+global SIZE_OLD = <%= old_content_size %>; // size of the old sound array
+global PREV_OP_ARGS = <%= prev_op_args %>; // size of the previous operation arguments
 
-fn crop<N,M>(sound_old: [Field; N], sound_new: [Field; M], start: Field, end: Field) {
-    assert(M - 1 == end - start);
-    let len: u32 = N as u32;
-    for i in 0..(len-1) {
-        assert(sound_new[i] == sound_old[start + i as Field]);
-    }
+fn compress<N,M>(sound_old: [Field; N], rate_old: Field, sound_new: [Field; M], rate_new: Field, compression_power: Field) {
+    assert(N == M * 2.pow_32(compression_power))
+    // TODO
 }
 
 fn main(
@@ -21,13 +18,12 @@ fn main(
     sound_old: [Field; SIZE_OLD],
     rate_old: Field,
     // op args
-    start: pub Field,
-    end: pub Field,
+    compression_power: Field,
     // Previous proof data  ------------------
-    verification_key: [Field; 114],
-    proof: [Field; 93],
+    verification_key : [Field; 114],
+    proof : [Field; 93],
     prev_op_args: [Field; PREV_OP_ARGS],
-    key_hash: Field,
+    key_hash : Field,
     // ---------------------------------------
 ) {
     // merge com, sound_new, prev_inputs into a single array
@@ -40,7 +36,7 @@ fn main(
         public_inputs[i] = prev_op_args[i];
     }
 
-    // Verify original sound belongs to com
+    // Verify original sound_old belongs to com
     std::verify_proof(
         verification_key.as_slice(),
         proof.as_slice(),
@@ -48,10 +44,8 @@ fn main(
         key_hash,
     );
 
-    assert(rate_new == rate_old);
-
     // Verify new sound is proper crop of old sound
-    crop(sound_old, sound_new, start, end);
+    compress(sound_old, rate_old, sound_new, rate_new, compression_power);
 }
 
 #[test]

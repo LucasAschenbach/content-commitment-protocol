@@ -1,5 +1,5 @@
 [package]
-name = "Dft"
+name = "init"
 type = "bin"
 authors = [""]
 compiler_version = ">=0.25.0"
