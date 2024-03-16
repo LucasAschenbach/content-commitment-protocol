@@ -61,14 +61,62 @@ def printRoots(size):
     resS.append(floatToFix(i[1]))
   print(resC)
   print(resS)
-  for i in resC:
-    print(fixToFloat(i))
 
+def createGaussian(size):
+  phi = (size / 6)
+  gaussian = []
+  for i in range(0,size):
+    z = 0
+    if i < size/2:
+      z = i
+    else:
+      z = i - size
+    gaussian.append(1/(math.sqrt(math.pi * 2) * phi) * math.exp(-(z*z)/(2*phi*phi)))
+  return gaussian
 
-res = genRoots(8)
-#print(res)
-printRoots(4)
-print(reverseBits(2))
-print(fixToFloat(-50331648))
+#linear lowpass
+def createLowPass(size):
+  lowpass = []
+  for i in range(0, size):
+    if i < size/4:
+      lowpass.append(1.0)
+    elif size - i < size/4:
+      lowpass.append(1.0)
+    elif i < size/2:
+      damp = i - size/4
+      lowpass.append(-4.0/size * damp + 1)
+    else:
+      damp = (size - i) - size/4
+      lowpass.append(-4.0/size * damp + 1)
+  return lowpass
+
+#expo lowpass
+def createLowPassExp(size, slope):
+  lowpass = []
+  for i in range(0, size):
+    if i < size/4:
+      lowpass.append(1.0)
+    elif size - i < size/4:
+      lowpass.append(1.0)
+    elif i < size/2:
+      damp = i - size/4
+      lowpass.append(math.exp(-4.0/size * damp * slope))
+    else:
+      damp = (size - i) - size/4
+      lowpass.append(math.exp(-4.0/size * damp * slope))
+  return lowpass
+
+def arrAsFix(arr):
+  res = []
+  for i in arr:
+    res.append(floatToFix(i))
+  return res
+
+size = 32
+
+print(reverseBits(5))
+printRoots(size)
+print(arrAsFix(createLowPass(size)))
+print(arrAsFix(createLowPassExp(size, 10)))
 
 

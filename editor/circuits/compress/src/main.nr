@@ -1,15 +1,14 @@
 use dep::std::println;
 
-global sizeDFT = 4;//32;
-global logConst = 2;//5;
-global logConstInc = 3;//6;
-global overlap = 2;//512;
-global gaussian : [i64; sizeDFT] = [16777216; sizeDFT];
-global rootsReal : [i64; sizeDFT] = [16777216, 0, -16777216, 0]; // [16777216, 16454846, 15500126, 13949745, 11863283, 9320921, 6420362, 3273072, 0, -3273072, -6420362, -9320921, -11863283, -13949745, -15500126, -16454846, -50331648, -16454846, -15500126, -13949745, -11863283, -9320921, -6420362, -3273072, 0, 3273072, 6420362, 9320921, 11863283, 13949745, 15500126, 16454846];
-global rootsImg : [i64; sizeDFT] = [0, -16777216, 0, 16777216]; // [0, -3273072, -6420362, -9320921, -11863283, -13949745, -15500126, -16454846, -50331648, -16454846, -15500126, -13949745, -11863283, -9320921, -6420362, -3273072, 0, 3273072, 6420362, 9320921, 11863283, 13949745, 15500126, 16454846, 16777216, 16454846, 15500126, 13949745, 11863283, 9320921, 6420362, 3273072];
-global zeroC : Complex = zero();
-
-global lookupReverse : [u64; sizeDFT] = [0, 2, 1, 3];//[0, 16, 8, 24, 4, 20, 12, 28, 2, 18, 10, 26, 6, 22, 14, 30, 1, 17, 9, 25, 5, 21, 13, 29, 3, 19, 11, 27, 7, 23, 15, 31];
+global sizeDFT = 32;
+global logConst = 5;
+global logConstInc = 6;
+global overlap = 8;//512;
+global lowpass : [i64; sizeDFT] = [16777216, 16777216, 16777216, 16777216, 16777216, 16777216, 16777216, 16777216, 16777216, 4806752, 1377157, 394562, 113043, 32387, 9279, 2658, 761, 2658, 9279, 32387, 113043, 394562, 1377157, 4806752, 16777216, 16777216, 16777216, 16777216, 16777216, 16777216, 16777216, 16777216];
+global rootsReal : [i64; sizeDFT] = [16777216, 16454846, 15500126, 13949745, 11863283, 9320921, 6420362, 3273072, 0, -3273072, -6420362, -9320921, -11863283, -13949745, -15500126, -16454846, -16777216, -16454846, -15500126, -13949745, -11863283, -9320921, -6420362, -3273072, 0, 3273072, 6420362, 9320921, 11863283, 13949745, 15500126, 16454846];
+global rootsImg : [i64; sizeDFT] = [0, -3273072, -6420362, -9320921, -11863283, -13949745, -15500126, -16454846, -16777216, -16454846, -15500126, -13949745, -11863283, -9320921, -6420362, -3273072, 0, 3273072, 6420362, 9320921, 11863283, 13949745, 15500126, 16454846, 16777216, 16454846, 15500126, 13949745, 11863283, 9320921, 6420362, 3273072];
+global zeroC : Complex = Complex{real : FixPoint{data : 0}, img : FixPoint {data : 0}};
+global lookupReverse : [u64; sizeDFT] = [0, 16, 8, 24, 4, 20, 12, 28, 2, 18, 10, 26, 6, 22, 14, 30, 1, 17, 9, 25, 5, 21, 13, 29, 3, 19, 11, 27, 7, 23, 15, 31];
 
 
 //first 24bits are decimal places
@@ -26,11 +25,11 @@ impl FixPoint{
     }
 
     fn mul(a : FixPoint, b : FixPoint) -> FixPoint {
-        FixPoint{data: (a.data * b.data) >> 24}
+        FixPoint{data: FixPoint::shiftRi64((a.data * b.data), 24)}
     }
 
     fn toPCM16(a : FixPoint) -> u64 {
-        ((a.data >> 8) & 0xffff) as u64
+        (FixPoint::shiftRi64(a.data, 8) & 0xffff) as u64
     }
 
     fn fromPCM16(a : u64) -> FixPoint {
@@ -42,7 +41,32 @@ impl FixPoint{
     }
 
     fn intToFix(inp : i64) -> FixPoint{
-        FixPoint{data : inp << 24}
+        FixPoint{data : FixPoint::shiftLi64(inp, 24)}
+    }
+
+    fn shiftRi64(a : i64, shift: u64) -> i64{
+        let mut absA : i64 = a;
+        if(a < 0){
+            absA *= -1;
+            absA = ((absA as u64) >> shift) as i64;
+            absA *= -1;
+        }else{
+            absA = ((absA as u64) >> shift) as i64;
+        }
+        absA
+    }
+
+
+    fn shiftLi64(a : i64, shift: u64) -> i64{
+        let mut absA : i64 = a;
+        if(a < 0){
+            absA *= -1;
+            absA = ((absA as u64) << shift) as i64;
+            absA *= -1;
+        }else{
+            absA = ((absA as u64) << shift) as i64;
+        }
+        absA
     }
 }
 struct Complex{
@@ -67,8 +91,8 @@ impl Complex{
         Complex{real : a.real, img : FixPoint{data : a.img.data * -1}}
     }
 
-    fn shift(a : Complex, shift: i64) -> Complex{
-        Complex{real: FixPoint{data : a.real.data >> shift}, img : FixPoint{data : a.img.data >> shift}}
+    fn shift(a : Complex, shift: u64) -> Complex{
+        Complex{real: FixPoint{data : FixPoint::shiftRi64(a.real.data, shift)}, img : FixPoint{data : FixPoint::shiftRi64(a.img.data, shift)}}
     }
 
     fn printC(a : Complex){
@@ -177,13 +201,20 @@ fn downsample<M> (data : [u64; M]) -> ([u64; M], u64){
         }
         chunk = dft(chunk);
         for j in 0..sizeDFT{
-            chunk[j] = Complex::mul(chunk[j],Complex{real: FixPoint{data : gaussian[j]}, img : FixPoint::zero()});
+            chunk[j] = Complex::mul(chunk[j],Complex{real: FixPoint{data : lowpass[j]}, img : FixPoint::zero()});
         }
         chunk = idft(chunk);
         for j in 0..sizeDFT{
             let idx = offset + j;
             if idx < M{
-                resCmplx[idx] = Complex::add(resCmplx[idx],Complex::shift(chunk[j],1));
+                //println(chunk[j]);
+                if j < overlap & i > 0{ 
+                    resCmplx[idx] = Complex::shift(Complex::add(resCmplx[idx],chunk[j]),1);  
+                }else{
+                    resCmplx[idx] = Complex::add(resCmplx[idx], chunk[j]);
+                }
+                          
+                //resCmplx[idx] = Complex::add(resCmplx[idx], chunk[j]);
             }
         }
         offset += sizeDFT - overlap;
@@ -196,16 +227,20 @@ fn downsample<M> (data : [u64; M]) -> ([u64; M], u64){
 
 
 fn main(){
+    test_downsampling();
 
 }
 
 #[test]
 fn test_dft(){
+    let mut test = -1;
+    test *= -1;
+    println(test as u64);
     let oneF = FixPoint::intToFix(1);
 
     let oneC = Complex{real : oneF, img : FixPoint::zero()};
     println(oneC);
-    let mut input : [Complex; sizeDFT] = [zeroC; 4];
+    let mut input : [Complex; sizeDFT] = [oneC; sizeDFT];
     for i in 0..4{
         input[i] = Complex{real : FixPoint::intToFix(i), img : FixPoint::zero()};
     }
@@ -218,6 +253,6 @@ fn test_dft(){
 
 #[test]
 fn test_downsampling(){
-    let test = [4000,4000,4000,4000,4000,4000,4000,4000,4000,4000,4000,4000,4000,4000];
+    let test = [4000 ; sizeDFT * 4];
     print(downsample(test));
 }
