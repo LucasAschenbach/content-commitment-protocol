@@ -1,6 +1,6 @@
 import math
 
-#fixpoint 24 bit decimals 8 bit rest
+#fixpoint 24 bit decimals 8 bit rest in case of 32bit integer
 #00000011 110000000000000000000000
 #3        .75
 def quant2fix(quant):
