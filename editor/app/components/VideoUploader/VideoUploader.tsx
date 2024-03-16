@@ -14,6 +14,7 @@ export default function VideoUploader() {
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [pcmData, setPcmData] = useState<ArrayBuffer | null>(null);
+  const [processingState, setProcessingState] = useState<"idle" | "processing" | "proving">("idle");
 
   const handleStartTimeChange = (e: React.ChangeEvent<HTMLInputElement>) =>
     setStartTime(e.target.value);
@@ -93,15 +94,21 @@ export default function VideoUploader() {
 
   // Placeholder function for processing audio
   const processAudio = () => {
-    // This function would actually call a backend API to process the audio
-    // After processing, the backend would return the output audio details
-    // For e.g
-    setOutputDetails({ duration: "01:30:00", size: "800 MB" });
   };
 
   // This function would provide the processed audio file to the user for download
-  const downloadAudio = () => {
-    // Placeholder function for downloading audio
+  const downloadAudio = async () => {
+    // Transform audio signal
+    setProcessingState("processing");
+
+    setOutputDetails({ duration: "01:30:00", size: "800 MB" });
+
+    // Generate proof for transformation
+    setProcessingState("proving");
+
+
+    // Bundle the proof and processed audio file for download
+
   };
 
   return (
@@ -187,16 +194,17 @@ export default function VideoUploader() {
             </button>
           </div>
         </div>
-        <button className={styles.processButton} onClick={processAudio}>
-          Process Audio
-        </button>
         <div className={styles.outputContainer}>
           <div className={styles.outputDetails}>
             <span>Duration: {outputDetails.duration}</span>
             <span>Size: {outputDetails.size}</span>
           </div>
           <button className={styles.downloadButton} onClick={downloadAudio}>
-            Download
+            {processingState === "idle"
+              ? "Download Processed Audio"
+              : processingState === "processing"
+              ? "Processing Audio..."
+              : "Generating Proof..."}
           </button>
         </div>
       </div>

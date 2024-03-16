@@ -1,19 +1,19 @@
 {
-  "0x0": {
-    "args": {},
-    "description": "init"
+  "init": {
+    "id": "0x00",
+    "args": {}
   },
-  "0x1": {
+  "crop": {
+    "id": "0x01",
     "args": {
       "start": "Field",
       "end": "Field"
-    },
-    "description": "crop"
+    }
   },
-  "0x2": {
+  "compress": {
+    "id": "0x02",
     "args": {
       "rate": "Field"
-    },
-    "description": "compress"
+    }
   }
 }

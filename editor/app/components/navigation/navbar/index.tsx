@@ -2,6 +2,7 @@ import React from "react";
 import Link from "next/link";
 import Logo from "./Logo";
 import Button from "./Button";
+import { generateFromTemplate } from "@/lib/generateFromTemplate";
 
 const Navbar = ({ toggle }: { toggle: () => void }) => {
   return (
@@ -34,7 +35,7 @@ const Navbar = ({ toggle }: { toggle: () => void }) => {
                 </Link>
               </li>
               <li>
-                <Link href="/about">
+                <Link href="/about" onClick={() => generateFromTemplate('../circuits/crop/src/main.nr.template', { content_size: '10', old_content_size: '10', last_op_args: '0' })}>
                   <p>About Us</p>
                 </Link>
               </li>

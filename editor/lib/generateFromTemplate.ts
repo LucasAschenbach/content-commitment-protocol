@@ -1,18 +1,17 @@
-import { readFile } from 'fs-extra';
-import * as path from 'path';
 import { Readable } from 'stream';
 
-generateFromTemplate(
-  '../init/src/main.nr.template',
-  { content_size: '10', old_content_size: '10', prev_op_args: '0' },
-);
+// generateFromTemplate(
+//   '../init/src/main.nr.template',
+//   { content_size: '10', old_content_size: '10', last_op_args: '0' },
+// );
 
-async function generateFromTemplate(templatePath: string, args: { [key: string]: string }): Promise<Readable> {
+export async function generateFromTemplate(templatePath: string, args: { [key: string]: string }): Promise<Readable> {
+  console.log("templatePath: ", templatePath);
   if (!templatePath.endsWith('.template')) {
     throw new Error(`The file at "${templatePath}" does not end with .template`);
   }
 
-  const content = await readFile(templatePath, 'utf8');
+  const content = await fetch(new URL(templatePath, import.meta.url)).then(res => res.text());
 
   const templateRegex = /<%=\s*(\w+)\s*%>/g;
   let match;
@@ -32,6 +31,8 @@ async function generateFromTemplate(templatePath: string, args: { [key: string]:
   const stream = new Readable();
   stream.push(replacedContent); // Push the content to the stream
   stream.push(null); // Signify the end of the stream (no more data)
+
+  console.log("stream: ", stream);
 
   return stream;
 }
