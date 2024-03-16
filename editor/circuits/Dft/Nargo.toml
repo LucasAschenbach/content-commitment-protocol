@@ -1,8 +1,0 @@
-[package]
-name = "Dft"
-type = "bin"
-authors = [""]
-compiler_version = ">=0.25.0"
-
-[dependencies]
-audio_lib = { path = "../audio_lib" }
