@@ -3,7 +3,7 @@ use dep::std::println;
 global sizeDFT = 32;
 global logConst = 5;
 global logConstInc = 6;
-global overlap = 8;//512;
+global overlap = sizeDFT/4;//512;
 global lowpass : [i64; sizeDFT] = [16777216, 16777216, 16777216, 16777216, 16777216, 16777216, 16777216, 16777216, 16777216, 4806752, 1377157, 394562, 113043, 32387, 9279, 2658, 761, 2658, 9279, 32387, 113043, 394562, 1377157, 4806752, 16777216, 16777216, 16777216, 16777216, 16777216, 16777216, 16777216, 16777216];
 global rootsReal : [i64; sizeDFT] = [16777216, 16454846, 15500126, 13949745, 11863283, 9320921, 6420362, 3273072, 0, -3273072, -6420362, -9320921, -11863283, -13949745, -15500126, -16454846, -16777216, -16454846, -15500126, -13949745, -11863283, -9320921, -6420362, -3273072, 0, 3273072, 6420362, 9320921, 11863283, 13949745, 15500126, 16454846];
 global rootsImg : [i64; sizeDFT] = [0, -3273072, -6420362, -9320921, -11863283, -13949745, -15500126, -16454846, -16777216, -16454846, -15500126, -13949745, -11863283, -9320921, -6420362, -3273072, 0, 3273072, 6420362, 9320921, 11863283, 13949745, 15500126, 16454846, 16777216, 16454846, 15500126, 13949745, 11863283, 9320921, 6420362, 3273072];
@@ -28,12 +28,20 @@ impl FixPoint{
         FixPoint{data: FixPoint::shiftRi64((a.data * b.data), 24)}
     }
 
-    fn toPCM16(a : FixPoint) -> u64 {
-        (FixPoint::shiftRi64(a.data, 8) & 0xffff) as u64
+    fn toPCM16(a : FixPoint) -> i64 {
+        let mut absA : i64 = a.data;
+        if(a.data < 0){
+            absA *= -1;
+            absA = (((absA as u64) >> 9)%(1<<16)) as i64;
+            absA *= -1;
+        }else{
+            absA = (((absA as u64) >> 9)%(1<<16)) as i64;
+        }
+        absA
     }
 
-    fn fromPCM16(a : u64) -> FixPoint {
-        FixPoint{data: (a << 8) as i64}
+    fn fromPCM16(a : i64) -> FixPoint {
+        FixPoint{data: FixPoint::shiftLi64(a, 9)}
     }
 
     fn zero() -> FixPoint{
@@ -182,8 +190,8 @@ fn calculateRounds(size : u64) -> u64 {
     rounds
 }
 
-fn downsample<M> (data : [u64; M]) -> ([u64; M], u64){
-    let mut res : [u64; M] = [0; M];
+fn downsample<M> (data : [i64; M]) -> ([i64; M], u64){
+    let mut res : [i64; M] = [0; M];
     let mut cmplx : [Complex; M] = [zeroC; M];
     //let mut last : [Complex; sizeDFT] = [zeroC; sizeDFT];
     let mut resCmplx : [Complex; M] = [zeroC; M];
