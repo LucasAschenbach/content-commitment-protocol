@@ -1,10 +1,55 @@
-fn main(x: Field, y: pub Field) {
-    assert(x != y);
+use dep::std;
+
+global SIZE = 100; // size of the sound array
+global SIZE_OLD = 100; // size of the old sound array
+global PREV_OP_ARGS = 0; // size of the previous operation arguments
+
+fn compress<N,M>(sound_old: [Field; N], rate_old: Field, sound_new: [Field; M], rate_new: Field, compression_power: Field) {
+    assert(N == M * 2.pow_32(compression_power))
+    // TODO
+}
+
+fn main(
+    // Commitment ----------------------------
+    com: pub Field,
+    // Content Operation ---------------------
+    sound_new: pub [Field; SIZE],
+    rate_new: pub Field,
+    sound_old: [Field; SIZE_OLD],
+    rate_old: Field,
+    // op args
+    compression_power: Field,
+    // Previous proof data  ------------------
+    verification_key : [Field; 114],
+    proof : [Field; 93],
+    prev_op_args: [Field; PREV_OP_ARGS],
+    key_hash : Field,
+    // ---------------------------------------
+) {
+    // merge com, sound_new, prev_inputs into a single array
+    let mut public_inputs = [0; 1 + SIZE_OLD + PREV_OP_ARGS];
+    public_inputs[0] = com;
+    for i in 1..SIZE_OLD {
+        public_inputs[i] = sound_old[i];
+    }
+    for i in SIZE_OLD+1..SIZE_OLD+PREV_OP_ARGS {
+        public_inputs[i] = prev_op_args[i];
+    }
+
+    // Verify original sound_old belongs to com
+    std::verify_proof(
+        verification_key.as_slice(),
+        proof.as_slice(),
+        public_inputs,
+        key_hash,
+    );
+
+    // Verify new sound is proper crop of old sound
+    compress(sound_old, rate_old, sound_new, rate_new, compression_power);
 }
 
 #[test]
 fn test_main() {
-    main(1, 2);
 
     // Uncomment to make test fail
     // main(1, 1);
