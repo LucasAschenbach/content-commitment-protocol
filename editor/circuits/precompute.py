@@ -23,10 +23,21 @@ def fixToFloat(a):
   res += (a&0xffffff)/(1<<24)
   return res
 
+def reverseBit(a, bits):
+  fstr = "{:0" + str(bits) + "b}"
+  rev = int(fstr.format(a)[::-1], 2)
+  return rev
+
+def reverseBits(bits):
+  res = []
+  for i in range(0,(1<<bits)):
+    res.append(reverseBit(i, bits))
+  return res
+
 
 def floatToFix(a):
   first = abs(int(a))
-  second = int(abs(a - first) * (1<<24))
+  second = int(abs(abs(a) - first) * (1<<24))
   res = (first << 24) + second
   if(a < 0):
     res *= -1
@@ -50,9 +61,14 @@ def printRoots(size):
     resS.append(floatToFix(i[1]))
   print(resC)
   print(resS)
+  for i in resC:
+    print(fixToFloat(i))
 
 
 res = genRoots(8)
-print(res)
-printRoots(8)
+#print(res)
+printRoots(4)
+print(reverseBits(2))
+print(fixToFloat(-50331648))
+
 
