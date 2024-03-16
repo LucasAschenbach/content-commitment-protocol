@@ -59,9 +59,9 @@ def printRoots(size):
   for i in res:
     resC.append(floatToFix(i[0]))
     resS.append(floatToFix(i[1]))
-  print(resC)
+  print(str(resC) + ';')
   print("")
-  print(resS)
+  print(str(resS) + ';')
 
 def createGaussian(size):
   phi = (size / 6)
@@ -114,13 +114,13 @@ def arrAsFix(arr):
   return res
 
   
-bits = 5
-size = 1<<5
-print(arrAsFix(createLowPassExp(size, 10)))
+bits = 7
+size = 1<<bits
+print(str(arrAsFix(createLowPassExp(size, 10)))+';')
 print("")
 printRoots(size)
 print("")
-print(reverseBits(bits))
+print(str(reverseBits(bits)) + ';')
 
 
 
