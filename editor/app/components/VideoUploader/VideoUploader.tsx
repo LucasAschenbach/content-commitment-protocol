@@ -3,17 +3,18 @@ import styles from "./VideoUploader.module.css";
 const WaveFile = require("wavefile").WaveFile;
 
 export default function VideoUploader() {
+  const waveformRef = useRef<HTMLCanvasElement>(null);
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
-  const [bitrate, setBitrate] = useState(96);
+  const [bitrate, setBitrate] = useState(96); //sample rate variable
   const [outputDetails, setOutputDetails] = useState({
     duration: "00:00:00",
     size: "0 MB",
   });
-  const [proof, setProof] = useState("");
+  const [proof, setProof] = useState(""); //proof variable
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
-  const [pcmData, setPcmData] = useState<ArrayBuffer | null>(null);
+  const [pcmData, setPcmData] = useState<ArrayBuffer | null>(null); //pacm data variable
 
   const handleStartTimeChange = (e: React.ChangeEvent<HTMLInputElement>) =>
     setStartTime(e.target.value);
@@ -29,6 +30,8 @@ export default function VideoUploader() {
     if (pcmData) {
       console.log("PCM Data is set:", pcmData);
       // Perform further actions with pcmData here
+      const pcmDataArray = new Int16Array(pcmData);
+      drawWaveform(pcmDataArray);
     }
   }, [pcmData]);
 
@@ -51,7 +54,7 @@ export default function VideoUploader() {
         setBitrate(sampleRate);
         const pcm = wav.getSamples(false, Int16Array);
         console.log("PCM Data Length:", pcm.length); // Verifying PCM data length
-        setPcmData(pcm);
+        setPcmData(pcm[0]);
       } catch (error) {
         console.error("Error processing WAV file:", error);
       } finally {
@@ -104,6 +107,36 @@ export default function VideoUploader() {
     // Placeholder function for downloading audio
   };
 
+  const drawWaveform = (pcmDataArray: Int16Array) => {
+    const canvas = waveformRef.current;
+    if (canvas) {
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        const width = canvas.width;
+        const height = canvas.height;
+        const centerY = height / 2;
+        ctx.clearRect(0, 0, width, height);
+
+        ctx.beginPath();
+        ctx.moveTo(0, centerY);
+
+        // Assuming a large number of samples, we may need to skip samples to fit them into our canvas width
+        const step = Math.ceil(pcmDataArray.length / width);
+        for (let i = 0; i < pcmDataArray.length; i += step) {
+          const value = pcmDataArray[i];
+          // Assuming 16-bit PCM data
+          const normalized = (value + 32768) / 65536; // Normalize the 16-bit data to a 0-1 range
+          const y = (1 - normalized) * height;
+          ctx.lineTo(i / step, y);
+        }
+
+        ctx.strokeStyle = "orange";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+    }
+  };
+
   return (
     <div className={styles.container}>
       <div className={styles.leftColumn}>
@@ -120,11 +153,14 @@ export default function VideoUploader() {
           />
           {audioFile ? (
             <div className={styles.fileDetails}>
-              <span>
+              <div className={styles.waveformContainer}>
+                <canvas ref={waveformRef} width="800" height="100"></canvas>
+              </div>
+              <span className="m-5">
                 {audioFile.name} - {fileSizeInMB(audioFile.size)} MB
               </span>
               <br />
-              <button onClick={() => setAudioFile(null)}>Replace File</button>
+              {/* <button onClick={() => setAudioFile(null)}>Replace File</button> */}
             </div>
           ) : (
             <p>
@@ -135,10 +171,10 @@ export default function VideoUploader() {
         </div>
         <div>
           <textarea
-            readOnly
             className={styles.proofField}
             placeholder="Computational proof of the video will be displayed here after upload."
             value={proof}
+            onChange={(e) => setProof(e.target.value)}
           />
         </div>
       </div>
