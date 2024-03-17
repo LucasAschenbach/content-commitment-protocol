@@ -1,11 +1,15 @@
 import React, { useEffect, useRef, useState } from "react";
 import styles from "./VideoUploader.module.css";
+import { BarretenbergBackend } from '@noir-lang/backend_barretenberg';
+import { Noir } from '@noir-lang/noir_js';
+import { compileCircuitCompressReturn } from "@/lib/compileCircuits";
 const WaveFile = require("wavefile").WaveFile;
 
 export default function VideoUploader() {
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
   const [bitrate, setBitrate] = useState(96);
+  const [compressCheck, setCompressCheck] = useState(false);
   const [outputDetails, setOutputDetails] = useState({
     duration: "00:00:00",
     size: "0 MB",
@@ -100,9 +104,34 @@ export default function VideoUploader() {
   const downloadAudio = async () => {
     // Transform audio signal
     setProcessingState("processing");
+    const samplingRate = bitrate * 1000
+    const startSample = startTime * samplingRate
+    const endSample = endTime * samplingRate
+    var afterCropAudioPCM = pcmData
+    if(startSample < pcmData.length && endSample < pcmData){
+      afterCropAudioPCM.splice(endTime * samplingRate,pcmData.length - endTime) //remove end part
+      afterCropAudioPCM.splice(0,startTime) //remove start part
+    }
+    const dur = afterCropAudioPCM.length / samplingRate
+    const durStr = new Date(dur * 1000).toISOString().substring(11, 16)
+    var resultAudio = afterCropAudioPCM
+    if(compressCheck){ //check if compression will be applied
+      const compiledCircuit = compileCircuitCompressReturn(afterCropAudioPCM.length)
+      const pedersenBackend = new BarretenbergBackend(compiledCircuit);
+      const pedersenNoir = new Noir(compiledCircuit, pedersenBackend);
+  
+      const res = await pedersenNoir.execute({sound : afterCropAudioPCM});
+  
+      var [afterSamplingAudioPCM, trackLen] = res.returnValue
+      afterSamplingAudioPCM.splice(trackLen,afterSamplingAudioPCM.length - trackLen)
+      resultAudio = afterSamplingAudioPCM
+    }
+  
+    //pedersenNoir.destroy();
+    //pedersenBackend.destroy();
 
-
-    setOutputDetails({ duration: "01:30:00", size: "800 MB" });
+    
+    setOutputDetails({ duration: durStr, size: "800 MB" });
 
     // Generate proof for transformation
     setProcessingState("proving");
@@ -171,30 +200,13 @@ export default function VideoUploader() {
           <label>Bitrate (in KHz)</label>
           <div className={styles.bitrateButtonContainer}>
             {/* Render bitrate buttons */}
-            <button
-              className={`${styles.bitrateButton} ${
-                bitrate === 96 ? styles.active : ""
-              }`}
-              onClick={() => handleBitrateButtonClick(96)}
-            >
-              96
-            </button>
-            <button
-              className={`${styles.bitrateButton} ${
-                bitrate === 48 ? styles.active : ""
-              }`}
-              onClick={() => handleBitrateButtonClick(48)}
-            >
-              48
-            </button>
-            <button
-              className={`${styles.bitrateButton} ${
-                bitrate === 24 ? styles.active : ""
-              }`}
-              onClick={() => handleBitrateButtonClick(24)}
-            >
-              24
-            </button>
+            <input
+              type="checkbox"
+              id="bitrateCheckbox"
+              checked={compressCheck === true}
+              onChange={() => setCompressCheck(!compressCheck)}
+            />
+            <label htmlFor="bitrateCheckbox">Enable High Bitrate</label>
           </div>
         </div>
         <div className={styles.outputContainer}>
