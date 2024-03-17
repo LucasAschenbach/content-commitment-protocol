@@ -1,9 +1,13 @@
 import React, { useEffect, useRef, useState } from "react";
 import styles from "./VideoUploader.module.css";
-import { BarretenbergBackend } from '@noir-lang/backend_barretenberg';
-import { Noir } from '@noir-lang/noir_js';
-import { compileCircuitCompress, compileCircuitCrop, compileCircuitInit } from "@/lib/compileCircuits";
-import opsDB from '@/circuits/ops_db.json';
+import { BarretenbergBackend } from "@noir-lang/backend_barretenberg";
+import { Noir } from "@noir-lang/noir_js";
+import {
+  compileCircuitCompress,
+  compileCircuitCrop,
+  compileCircuitInit,
+} from "@/lib/compileCircuits";
+import opsDB from "@/circuits/ops_db.json";
 const WaveFile = require("wavefile").WaveFile;
 import circuit_init_noir from "@/circuits/init/src/main.nr.template";
 
@@ -16,6 +20,7 @@ type ProofDataScheme = {
 };
 
 export default function VideoUploader() {
+  const waveformRef = useRef<HTMLCanvasElement>(null);
   const [startTime, setStartTime] = useState(0);
   const [endTime, setEndTime] = useState(0);
   const [bitrate, setBitrate] = useState(96);
@@ -44,6 +49,8 @@ export default function VideoUploader() {
     if (pcmData) {
       console.log("PCM Data is set:", pcmData);
       // Perform further actions with pcmData here
+      const pcmDataArray = new Int16Array(pcmData);
+      drawWaveform(pcmDataArray);
     }
   }, [pcmData]);
 
@@ -123,7 +130,8 @@ export default function VideoUploader() {
 
     if (
       startSample < afterCropAudioPCM!.length &&
-      endSample < afterCropAudioPCM.length
+      endSample < afterCropAudioPCM.length &&
+      startSample < endSample
     ) {
       afterCropAudioPCM = afterCropAudioPCM.slice(startSample, endSample); //remove end part
     }
@@ -160,7 +168,7 @@ export default function VideoUploader() {
 
     const proofDataJson = JSON.parse(proofData);
     const com = proofDataJson.commitment;
-    const prevProof = Uint8Array.from(Buffer.from(proofDataJson.proof, 'hex'));
+    const prevProof = Uint8Array.from(Buffer.from(proofDataJson.proof, "hex"));
     const lastOp = proofDataJson.ops[proofDataJson.ops.length - 1];
 
     // mock data
@@ -171,58 +179,95 @@ export default function VideoUploader() {
     const contentSize = sound.length;
     const contentSizeCrop = soundCrop.length;
     const contentSizeCompress = soundCompress.length;
-    const lastOpArgsLength = Object.keys(opsDB[lastOp.descriptor as keyof typeof opsDB].args).length;
+    const lastOpArgsLength = Object.keys(
+      opsDB[lastOp.descriptor as keyof typeof opsDB].args
+    ).length;
 
     // Create circuit
     const circuitPrev = await (async () => {
       switch (lastOp.descriptor as keyof typeof opsDB) {
-        case "init": return compileCircuitInit(contentSize);
-        case "crop": return compileCircuitCrop(contentSizeCrop, contentSize, lastOpArgsLength);
-        case "compress": return compileCircuitCompress(contentSizeCompress, contentSizeCrop, lastOpArgsLength);
+        case "init":
+          return compileCircuitInit(contentSize);
+        case "crop":
+          return compileCircuitCrop(
+            contentSizeCrop,
+            contentSize,
+            lastOpArgsLength
+          );
+        case "compress":
+          return compileCircuitCompress(
+            contentSizeCompress,
+            contentSizeCrop,
+            lastOpArgsLength
+          );
       }
     })();
-    const circuitCrop = await compileCircuitCrop(contentSizeCrop, contentSize, lastOpArgsLength);
-    const circuitCompress = await compileCircuitCompress(contentSizeCompress, contentSizeCrop, lastOpArgsLength);
+    const circuitCrop = await compileCircuitCrop(
+      contentSizeCrop,
+      contentSize,
+      lastOpArgsLength
+    );
+    const circuitCompress = await compileCircuitCompress(
+      contentSizeCompress,
+      contentSizeCrop,
+      lastOpArgsLength
+    );
 
     const circuits = {
       prev: circuitPrev,
       crop: circuitCrop,
       compress: circuitCompress,
-    }
+    };
 
     const backends = {
-      prev: new BarretenbergBackend(circuits.prev, { threads: navigator.hardwareConcurrency }),
-      crop: new BarretenbergBackend(circuits.crop, { threads: navigator.hardwareConcurrency }),
-      compress: new BarretenbergBackend(circuits.compress, { threads: navigator.hardwareConcurrency }),
-    }
+      prev: new BarretenbergBackend(circuits.prev, {
+        threads: navigator.hardwareConcurrency,
+      }),
+      crop: new BarretenbergBackend(circuits.crop, {
+        threads: navigator.hardwareConcurrency,
+      }),
+      compress: new BarretenbergBackend(circuits.compress, {
+        threads: navigator.hardwareConcurrency,
+      }),
+    };
 
     const noirPrograms = {
       prev: new Noir(circuits.prev, backends.prev),
       crop: new Noir(circuits.crop, backends.crop),
       compress: new Noir(circuits.compress, backends.compress),
-    }
-
+    };
 
     // 1. Prove crop --------------------------------
 
-    const prevPublicInputs = [com, sound, ...lastOp.args.map((arg: any) => arg.toString())];
+    const prevPublicInputs = [
+      com,
+      sound,
+      ...lastOp.args.map((arg: any) => arg.toString()),
+    ];
 
     // backends.prev.verifyProof({ proof: prevProof, publicInputs: publicInputs });
-    const { proofAsFields: cropProofAsFields, vkAsFields: cropVkAsFields, vkHash: cropVkHash } = await backends.prev.generateRecursiveProofArtifacts(
+    const {
+      proofAsFields: cropProofAsFields,
+      vkAsFields: cropVkAsFields,
+      vkHash: cropVkHash,
+    } = await backends.prev.generateRecursiveProofArtifacts(
       { proof: prevProof, publicInputs: prevPublicInputs },
-      lastOpArgsLength,
+      lastOpArgsLength
     );
-  
-    const { proof: cropProof, publicInputs: cropPublicInputs } = await noirPrograms.crop.generateProof({ inputs: {
-      com: com,
-      sound_new: soundCrop,
-      sound_old: sound,
-      start: startIndex,
-      end: endIndex,
-      verification_key: cropVkAsFields,
-      proof: cropProofAsFields,
-      vk_hash: cropVkHash,
-    }});
+
+    const { proof: cropProof, publicInputs: cropPublicInputs } =
+      await noirPrograms.crop.generateProof({
+        inputs: {
+          com: com,
+          sound_new: soundCrop,
+          sound_old: sound,
+          start: startIndex,
+          end: endIndex,
+          verification_key: cropVkAsFields,
+          proof: cropProofAsFields,
+          vk_hash: cropVkHash,
+        },
+      });
 
     // 2. Prove compress ----------------------------
 
@@ -230,24 +275,31 @@ export default function VideoUploader() {
 
     if (didCompress) {
       // backends.crop.verifyProof({ proof: cropProof, publicInputs: cropPublicInputs });
-      const { proofAsFields: compressProofAsFields, vkAsFields: compressVkAsFields, vkHash: compressVkHash } = await backends.prev.generateRecursiveProofArtifacts(
+      const {
+        proofAsFields: compressProofAsFields,
+        vkAsFields: compressVkAsFields,
+        vkHash: compressVkHash,
+      } = await backends.prev.generateRecursiveProofArtifacts(
         { proof: cropProof, publicInputs: cropPublicInputs },
-        2, // crop has 2 op args
+        2 // crop has 2 op args
       );
-    
-      const { proof: compressProof, publicInputs: compressPublicInputs } = await noirPrograms.crop.generateProof({ inputs: {
-        com: com,
-        sound_new: soundCrop,
-        sound_old: sound,
-        verification_key: compressVkAsFields,
-        proof: cropProofAsFields,
-        vk_hash: cropVkHash,
-      }});
+
+      const { proof: compressProof, publicInputs: compressPublicInputs } =
+        await noirPrograms.crop.generateProof({
+          inputs: {
+            com: com,
+            sound_new: soundCrop,
+            sound_old: sound,
+            verification_key: compressVkAsFields,
+            proof: cropProofAsFields,
+            vk_hash: cropVkHash,
+          },
+        });
 
       // Create new proof data object
       proofDataNew = {
         commitment: com,
-        proof: Buffer.from(compressProof).toString('hex'),
+        proof: Buffer.from(compressProof).toString("hex"),
         ops: [
           ...proofDataJson.ops,
           { descriptor: "crop", args: [startIndex, endIndex] },
@@ -258,7 +310,7 @@ export default function VideoUploader() {
       // Create new proof data object
       proofDataNew = {
         commitment: com,
-        proof: Buffer.from(cropProof).toString('hex'),
+        proof: Buffer.from(cropProof).toString("hex"),
         ops: [
           ...proofDataJson.ops,
           { descriptor: "crop", args: [startIndex, endIndex] },
@@ -266,9 +318,39 @@ export default function VideoUploader() {
       };
     }
 
-    // 
+    //
 
     setProcessingState("idle");
+  };
+
+  const drawWaveform = (pcmDataArray: Int16Array) => {
+    const canvas = waveformRef.current;
+    if (canvas) {
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        const width = canvas.width;
+        const height = canvas.height;
+        const centerY = height / 2;
+        ctx.clearRect(0, 0, width, height);
+
+        ctx.beginPath();
+        ctx.moveTo(0, centerY);
+
+        // Assuming a large number of samples, we may need to skip samples to fit them into our canvas width
+        const step = Math.ceil(pcmDataArray.length / width);
+        for (let i = 0; i < pcmDataArray.length; i += step) {
+          const value = pcmDataArray[i];
+          // Assuming 16-bit PCM data
+          const normalized = (value + 32768) / 65536; // Normalize the 16-bit data to a 0-1 range
+          const y = (1 - normalized) * height;
+          ctx.lineTo(i / step, y);
+        }
+
+        ctx.strokeStyle = "orange";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+    }
   };
 
   return (
@@ -287,11 +369,14 @@ export default function VideoUploader() {
           />
           {audioFile ? (
             <div className={styles.fileDetails}>
-              <span>
+              <div className={styles.waveformContainer}>
+                <canvas ref={waveformRef} width="800" height="100"></canvas>
+              </div>
+              <span className="m-5">
                 {audioFile.name} - {fileSizeInMB(audioFile.size)} MB
               </span>
               <br />
-              <button onClick={() => setAudioFile(null)}>Replace File</button>
+              {/* <button onClick={() => setAudioFile(null)}>Replace File</button> */}
             </div>
           ) : (
             <p>
@@ -302,10 +387,10 @@ export default function VideoUploader() {
         </div>
         <div>
           <textarea
-            readOnly
             className={styles.proofField}
-            placeholder="Computational proof of the video will be displayed here after upload."
+            placeholder="Computational proof of the audio will be displayed here after upload."
             value={proofData}
+            onChange={(e) => setproofData(e.target.value)}
           />
         </div>
       </div>
@@ -328,18 +413,15 @@ export default function VideoUploader() {
             />
           </label>
         </div>
-        <div className={styles.compressControl}>
-          <label>Bitrate (in KHz)</label>
-          <div className={styles.bitrateButtonContainer}>
-            {/* Render bitrate buttons */}
-            <input
-              type="checkbox"
-              id="bitrateCheckbox"
-              checked={compressCheck === true}
-              onChange={() => setCompressCheck(!compressCheck)}
-            />
-            <label htmlFor="bitrateCheckbox">Enable High Bitrate</label>
-          </div>
+        <div className={styles.bitrateCheckboxContainer}>
+          {/* Render bitrate buttons */}
+          <input
+            type="checkbox"
+            id="bitrateCheckbox"
+            checked={compressCheck === true}
+            onChange={() => setCompressCheck(!compressCheck)}
+          />
+          <label htmlFor="bitrateCheckbox">Downsample Bitrate (in KHz)</label>
         </div>
         <div className={styles.outputContainer}>
           <div className={styles.outputDetails}>
