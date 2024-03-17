@@ -11,7 +11,7 @@ pub fn crop<N,M>(sound: [Field; N], start: Field, end: Field) -> pub [Field; M] 
     sound_new
 }
 
-pub fn compress<N>(sound: [i64; N], rate: Field, compression_power: Field) -> ([i64; N],u64) {
+pub fn compress<N>(sound: [i64; N]) -> ([i64; N],u64) {
     //assert(N == M * 2.pow_32(compression_power));
     // TODO
     downsample(sound)

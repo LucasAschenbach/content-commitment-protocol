@@ -232,11 +232,6 @@ pub fn downsample<M> (data : [i64; M]) -> ([i64; M], u64){
 }
 
 
-fn main(){
-    test_downsampling();
-
-}
-
 #[test]
 fn test_dft(){
     let mut test = -1;

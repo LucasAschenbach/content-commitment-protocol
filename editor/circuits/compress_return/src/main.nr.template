@@ -1,6 +1,6 @@
 use dep::audio_lib::transform::compress;
 
-global SIZE = 100;
+global SIZE = <%= content_size %>;
 
 fn main(sound: [i64; SIZE]) {
     compress(sound)

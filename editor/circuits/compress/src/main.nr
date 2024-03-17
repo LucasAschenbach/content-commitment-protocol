@@ -41,7 +41,11 @@ fn main(
     );
 
     // Verify new sound is proper crop of old sound
-    compress(sound_old, rate_old, sound_new, rate_new, compression_power);
+    let (sound_test, len) = compress(sound_old);
+    assert!(len == SIZE);
+    for i in 0..SIZE-1 {
+        assert!(sound_test[i] == sound_new[i]);
+    }
 }
 
 #[test]
