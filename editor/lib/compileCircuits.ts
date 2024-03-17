@@ -77,6 +77,7 @@ async function compileCircuit(circuitName: string, args: { [key: string]: string
 
   fm.writeFile('./src/main.nr', main);
   fm.writeFile('./Nargo.toml', nargo);
+  // TODO: also copy audio_lib, no time ... :,(
   const result = await compile(fm);
   if (!('program' in result)) {
     throw new Error('Compilation failed');
