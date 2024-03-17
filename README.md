@@ -6,7 +6,10 @@ Our main goal is to develop a seemless but secure solution for data signatures t
 
 The Architecture
 
-At it's core, zertify uses a commitment(C) that connects the signature to the signed piece of data.  
+At it's core,
+![IMG_0215](https://github.com/Mojomarv/content-commitment-protocol/assets/158106595/21c9932b-f9cc-4a07-8e2f-d5814e456cfc)
+
+ zertify uses a commitment(C) that connects the signature to the signed piece of data.  
 
 1. Updatability: The commitment should be infinitely updatable without invalidating any authorizations. Each update should only requiring the information available from the previous step. The update operations must be public.
    
