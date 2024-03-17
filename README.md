@@ -1,7 +1,7 @@
-# **Welcome to zertify!**
+# **Welcome to Zertify!**
 
 
-AI developement is reaching it's tipping point with newest projects like Sora or Dall-E which will even further accelerate the already exponential growth of the problem we are adressing. Deepfakes. 
+AI developement is reaching it's tipping point with newest projects like Sora or Dall-E. This will even further accelerate the already exponential growth of one of the problems we are adressing. Deepfakes. 
 
 Our main goal is to deliver a seemless but secure solution for data signatures to Ethereum. We strongly focused on building a proof of concept that shows the feasibility of our architecture. For this, we chose to leverage zk-technology and proof folding to ensure safety and scalability. 
 
