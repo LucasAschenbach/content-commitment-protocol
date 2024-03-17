@@ -2,12 +2,9 @@ import React, { useEffect, useRef, useState } from "react";
 import styles from "./VideoUploader.module.css";
 import { BarretenbergBackend } from '@noir-lang/backend_barretenberg';
 import { Noir } from '@noir-lang/noir_js';
-import { compileCircuitCompress, compileCircuitCrop, compileCircuitInit } from "@/lib/compileCircuits";
+import { compileCircuitCompress, compileCircuitCompressReturn, compileCircuitCrop, compileCircuitInit } from "@/lib/compileCircuits";
 import opsDB from '@/circuits/ops_db.json';
 const WaveFile = require("wavefile").WaveFile;
-import circuit_init_noir from "@/circuits/init/src/main.nr.template";
-
-console.log(circuit_init_noir);
 
 type ProofDataScheme = {
   commitment: string;
@@ -116,16 +113,16 @@ export default function VideoUploader() {
     setProcessingState("processing");
 
     const samplingRate = bitrate * 1000;
-    const startSample = startTime * samplingRate;
-    const endSample = endTime * samplingRate;
+    const startIndex = startTime * samplingRate;
+    const endIndex = endTime * samplingRate;
 
     var afterCropAudioPCM = new Int16Array(pcmData);
 
     if (
-      startSample < afterCropAudioPCM!.length &&
-      endSample < afterCropAudioPCM.length
+      startIndex < afterCropAudioPCM!.length &&
+      endIndex < afterCropAudioPCM.length
     ) {
-      afterCropAudioPCM = afterCropAudioPCM.slice(startSample, endSample); //remove end part
+      afterCropAudioPCM = afterCropAudioPCM.slice(startIndex, endIndex); //remove end part
     }
     const dur = afterCropAudioPCM.length / samplingRate;
     const durStr = new Date(dur * 1000).toISOString().substring(11, 16);
@@ -201,7 +198,6 @@ export default function VideoUploader() {
       crop: new Noir(circuits.crop, backends.crop),
       compress: new Noir(circuits.compress, backends.compress),
     }
-
 
     // 1. Prove crop --------------------------------
 
