@@ -5,6 +5,9 @@ import { Noir } from '@noir-lang/noir_js';
 import { compileCircuitCompress, compileCircuitCrop, compileCircuitInit } from "@/lib/compileCircuits";
 import opsDB from '@/circuits/ops_db.json';
 const WaveFile = require("wavefile").WaveFile;
+import circuit_init_noir from "@/circuits/init/src/main.nr.template";
+
+console.log(circuit_init_noir);
 
 type ProofDataScheme = {
   commitment: string;
@@ -13,8 +16,8 @@ type ProofDataScheme = {
 };
 
 export default function VideoUploader() {
-  const [startTime, setStartTime] = useState("");
-  const [endTime, setEndTime] = useState("");
+  const [startTime, setStartTime] = useState(0);
+  const [endTime, setEndTime] = useState(0);
   const [bitrate, setBitrate] = useState(96);
   const [compressCheck, setCompressCheck] = useState(false);
   const [outputDetails, setOutputDetails] = useState({
@@ -25,12 +28,12 @@ export default function VideoUploader() {
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [pcmData, setPcmData] = useState<ArrayBuffer | null>(null);
-  const [processingState, setProcessingState] = useState<"idle" | "processing" | "proving">("idle");
+  const [processingState, setProcessingState] = useState<
+    "idle" | "processing" | "proving"
+  >("idle");
 
-  const handleStartTimeChange = (e: React.ChangeEvent<HTMLInputElement>) =>
-    setStartTime(e.target.value);
-  const handleEndTimeChange = (e: React.ChangeEvent<HTMLInputElement>) =>
-    setEndTime(e.target.value);
+  const handleStartTimeChange = (e: any) => setStartTime(e.target.value);
+  const handleEndTimeChange = (e: any) => setEndTime(e.target.value);
   // Bitrate buttons click handler
   const handleBitrateButtonClick = (newBitrate: number) => {
     setBitrate(newBitrate);
@@ -103,39 +106,53 @@ export default function VideoUploader() {
   const fileSizeInMB = (fileSize: number) =>
     (fileSize / (1024 * 1024)).toFixed(2);
 
+  // Placeholder function for processing audio
+  const processAudio = () => {};
+
   // This function would provide the processed audio file to the user for download
   const downloadAudio = async () => {
-    const startIndex = parseInt(startTime);
-    const endIndex = parseInt(endTime);
+    if (!pcmData) return;
     // Transform audio signal
     setProcessingState("processing");
+
     const samplingRate = bitrate * 1000;
-    const startSample = startIndex * samplingRate;
-    const endSample = endIndex * samplingRate;
-    var afterCropAudioPCM = pcmData;
-    if(startSample < pcmData.length && endSample < pcmData){
-      afterCropAudioPCM.splice(endTime * samplingRate,pcmData.length - endTime) //remove end part
-      afterCropAudioPCM.splice(0,startTime) //remove start part
+    const startSample = startTime * samplingRate;
+    const endSample = endTime * samplingRate;
+
+    var afterCropAudioPCM = new Int16Array(pcmData);
+
+    if (
+      startSample < afterCropAudioPCM!.length &&
+      endSample < afterCropAudioPCM.length
+    ) {
+      afterCropAudioPCM = afterCropAudioPCM.slice(startSample, endSample); //remove end part
     }
-    const dur = afterCropAudioPCM.length / samplingRate
-    const durStr = new Date(dur * 1000).toISOString().substring(11, 16)
-    var resultAudio = afterCropAudioPCM
-    if(compressCheck){ //check if compression will be applied
-      const compiledCircuit = compileCircuitCompressReturn(afterCropAudioPCM.length)
+    const dur = afterCropAudioPCM.length / samplingRate;
+    const durStr = new Date(dur * 1000).toISOString().substring(11, 16);
+    var resultAudio = afterCropAudioPCM;
+    if (compressCheck) {
+      //check if compression will be applied
+      const compiledCircuit = await compileCircuitCompressReturn(
+        afterCropAudioPCM.length
+      );
       const pedersenBackend = new BarretenbergBackend(compiledCircuit);
       const pedersenNoir = new Noir(compiledCircuit, pedersenBackend);
-  
-      const res = await pedersenNoir.execute({sound : afterCropAudioPCM});
-  
-      var [afterSamplingAudioPCM, trackLen] = res.returnValue
-      afterSamplingAudioPCM.splice(trackLen,afterSamplingAudioPCM.length - trackLen)
-      resultAudio = afterSamplingAudioPCM
+
+      const res = await pedersenNoir.execute({
+        sound: Array.from(afterCropAudioPCM),
+      });
+
+      console.log(res);
+      // let afterSamplingAudioPCM = res.returnValue[0];
+      // const trackLen = res.returnValue[1];
+
+      // afterSamplingAudioPCM = afterSamplingAudioPCM.slice(0, trackLen);
+      // resultAudio = new Int16Array(afterSamplingAudioPCM);
     }
-  
+
     //pedersenNoir.destroy();
     //pedersenBackend.destroy();
 
-    
     setOutputDetails({ duration: durStr, size: "800 MB" });
 
     // Generate proof for transformation
@@ -297,14 +314,18 @@ export default function VideoUploader() {
           <label>
             Start Time
             <input
-              type="text"
+              type="number"
               value={startTime}
               onChange={handleStartTimeChange}
             />
           </label>
           <label>
             End Time
-            <input type="text" value={endTime} onChange={handleEndTimeChange} />
+            <input
+              type="number"
+              value={endTime}
+              onChange={handleEndTimeChange}
+            />
           </label>
         </div>
         <div className={styles.compressControl}>
