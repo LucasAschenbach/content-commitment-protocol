@@ -1,15 +1,19 @@
 import { compile, createFileManager } from '@noir-lang/noir_wasm';
 import { CompiledCircuit } from '@noir-lang/types';
 
-export async function compileCircuitCrop(contentSize: number, oldContentSize: number, lastOpArgs: number): Promise<CompiledCircuit> {
-  return await compileCircuit('../circuits/crop/', {
-    size: contentSize.toString(),
-    size_new: oldContentSize.toString(),
-    last_op_args: lastOpArgs.toString()
+export async function compileCircuitInit(contentSize: number): Promise<CompiledCircuit> {
+  return await compileCircuit('../circuits/init/', {
+    content_size: contentSize.toString(),
   });
 }
 
-export async function compileCircuitCompress(contentSize: number, oldContentSize: number, lastOpArgs: number): Promise<CompiledCircuit> {
+export async function compileCircuitInitReturn(contentSize: number): Promise<CompiledCircuit> {
+  return await compileCircuit('../circuits/init_return/', {
+    content_size: contentSize.toString(),
+  });
+}
+
+export async function compileCircuitCrop(contentSize: number, oldContentSize: number, lastOpArgs: number): Promise<CompiledCircuit> {
   return await compileCircuit('../circuits/crop/', {
     content_size: contentSize.toString(),
     old_content_size: oldContentSize.toString(),
@@ -17,11 +21,17 @@ export async function compileCircuitCompress(contentSize: number, oldContentSize
   });
 }
 
-export async function compileCircuitInit(contentSize: number): Promise<CompiledCircuit> {
-  return await compileCircuit('../circuits/init/', {
+export async function compileCircuitCompress(contentSize: number, oldContentSize: number, lastOpArgs: number): Promise<CompiledCircuit> {
+  return await compileCircuit('../circuits/compress/', {
     content_size: contentSize.toString(),
-    old_content_size: contentSize.toString(),
-    last_op_args: '0',
+    old_content_size: oldContentSize.toString(),
+    last_op_args: lastOpArgs.toString()
+  });
+}
+
+export async function compileCircuitCompressReturn(contentSize: number): Promise<CompiledCircuit> {
+  return await compileCircuit('../circuits/compress_return/', {
+    content_size: contentSize.toString(),
   });
 }
 
