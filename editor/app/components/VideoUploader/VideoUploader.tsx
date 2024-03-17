@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import styles from "./VideoUploader.module.css";
 import { BarretenbergBackend } from '@noir-lang/backend_barretenberg';
 import { Noir } from '@noir-lang/noir_js';
-import { compileCircuitCompress, compileCircuitCompressReturn, compileCircuitCrop, compileCircuitInit } from "@/lib/compileCircuits";
+import { compileCircuitCompress, compileCircuitCompressReturn, compileCircuitCrop, compileCircuitInit, compileCircuitInitReturn } from "@/lib/compileCircuits";
 import opsDB from '@/circuits/ops_db.json';
 const WaveFile = require("wavefile").WaveFile;
 
@@ -107,7 +107,7 @@ export default function VideoUploader() {
   const generateInitialProof = async () => {
     const audioPCM = new Int16Array(pcmData!);
 
-    const circuitInitReturn = await compileCircuitCompressReturn(
+    const circuitInitReturn = await compileCircuitInitReturn(
       audioPCM.length
     );
     const backendInitReturn = new BarretenbergBackend(circuitInitReturn);
