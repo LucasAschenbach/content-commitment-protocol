@@ -103,9 +103,15 @@ export default function VideoUploader() {
   const downloadAudio = async () => {
     // Transform audio signal
     setProcessingState("processing");
+    const startSample = startTime * samplingRate
+    const endSample = endTime * samplingRate
     var afterCropAudioPCM = pcmData
-    afterCropAudioPCM.splice(endTime,pcmData.length - endTime) //remove end part
-    afterCropAudioPCM.splice(0,startTime) //remove start part
+    if(startSample < pcmData.length && endSample < pcmData){
+      afterCropAudioPCM.splice(endTime * samplingRate,pcmData.length - endTime) //remove end part
+      afterCropAudioPCM.splice(0,startTime) //remove start part
+    }
+    const dur = afterCropAudioPCM.length / samplingRate
+    const durStr = new Date(dur * 1000).toISOString().substring(11, 16)
     var resultAudio = afterCropAudioPCM
     if(compressCheck){ //check if compression will be applied
       const compiledCircuit = compileCircuitCompressReturn(afterCropAudioPCM.length)
@@ -122,8 +128,8 @@ export default function VideoUploader() {
     //pedersenNoir.destroy();
     //pedersenBackend.destroy();
 
-
-    setOutputDetails({ duration: "01:30:00", size: "800 MB" });
+    
+    setOutputDetails({ duration: durStr, size: "800 MB" });
 
     // Generate proof for transformation
     setProcessingState("proving");
