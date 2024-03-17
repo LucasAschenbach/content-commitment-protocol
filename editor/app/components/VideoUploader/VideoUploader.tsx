@@ -9,6 +9,7 @@ export default function VideoUploader() {
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
   const [bitrate, setBitrate] = useState(96);
+  const [compressCheck, setCompressCheck] = useState(false);
   const [outputDetails, setOutputDetails] = useState({
     duration: "00:00:00",
     size: "0 MB",
@@ -103,6 +104,7 @@ export default function VideoUploader() {
   const downloadAudio = async () => {
     // Transform audio signal
     setProcessingState("processing");
+    const samplingRate = bitrate * 1000
     const startSample = startTime * samplingRate
     const endSample = endTime * samplingRate
     var afterCropAudioPCM = pcmData
@@ -196,30 +198,13 @@ export default function VideoUploader() {
           <label>Bitrate (in KHz)</label>
           <div className={styles.bitrateButtonContainer}>
             {/* Render bitrate buttons */}
-            <button
-              className={`${styles.bitrateButton} ${
-                bitrate === 96 ? styles.active : ""
-              }`}
-              onClick={() => handleBitrateButtonClick(96)}
-            >
-              96
-            </button>
-            <button
-              className={`${styles.bitrateButton} ${
-                bitrate === 48 ? styles.active : ""
-              }`}
-              onClick={() => handleBitrateButtonClick(48)}
-            >
-              48
-            </button>
-            <button
-              className={`${styles.bitrateButton} ${
-                bitrate === 24 ? styles.active : ""
-              }`}
-              onClick={() => handleBitrateButtonClick(24)}
-            >
-              24
-            </button>
+            <input
+              type="checkbox"
+              id="bitrateCheckbox"
+              checked={compressCheck === true}
+              onChange={() => setCompressCheck(!compressCheck)}
+            />
+            <label htmlFor="bitrateCheckbox">Enable High Bitrate</label>
           </div>
         </div>
         <div className={styles.outputContainer}>
