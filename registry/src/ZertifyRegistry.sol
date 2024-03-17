@@ -24,6 +24,7 @@ contract ZertifyRegistry {
 		emit AttestationSubmitted(_commitment, signer);
 	}
 
+	// sender must have known private key
 	function invalidate() external {
 		invalidated[msg.sender] = true;
 	}
