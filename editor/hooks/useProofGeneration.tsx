@@ -1,9 +1,9 @@
 import { toast } from 'react-toastify';
 import { useEffect, useState } from 'react';
-import { compileCircuitInit, compileCircuitCrop, compileCircuitCompress } from '../lib/compileCircuits';
+import { compileCircuitInit, compileCircuitCrop, compileCircuitCompress } from '@/lib/compileCircuits';
 import { BarretenbergBackend, ProofData } from '@noir-lang/backend_barretenberg';
 import { Noir } from '@noir-lang/noir_js';
-import opsDB from '../circuits/ops_db.json';
+import opsDB from '@/circuits/ops_db.json';
 
 type SoundObject = {
   sound: number[];
@@ -41,23 +41,23 @@ export function useSoundProofGeneration(transform: Transformation, inputs?: { [k
     const circuitCrop = await compileCircuitCrop(contentSize, contentSizeOld, lastOpArgNum);
     const circuitCompress = await compileCircuitCompress(contentSize, contentSizeOld, lastOpArgNum);
 
-    const backend = new BarretenbergBackend(circuit, { threads: navigator.hardwareConcurrency });
-    const noir = new Noir(circuit, backend);
+    // const backend = new BarretenbergBackend(circuit, { threads: navigator.hardwareConcurrency });
+    // const noir = new Noir(circuit, backend);
 
-    await toast.promise(noir.init, {
-      pending: 'Initializing Noir...',
-      success: 'Noir initialized!',
-      error: 'Error initializing Noir',
-    });
+    // await toast.promise(noir.init, {
+    //   pending: 'Initializing Noir...',
+    //   success: 'Noir initialized!',
+    //   error: 'Error initializing Noir',
+    // });
 
-    const data = await toast.promise(noir.generateProof(inputs), {
-      pending: 'Generating proof',
-      success: 'Proof generated',
-      error: 'Error generating proof',
-    });
+    // const data = await toast.promise(noir.generateProof(inputs), {
+    //   pending: 'Generating proof',
+    //   success: 'Proof generated',
+    //   error: 'Error generating proof',
+    // });
 
-    setProofData(data);
-    setNoir(noir);
+    // setProofData(data);
+    // setNoir(noir);
   };
 
   useEffect(() => {

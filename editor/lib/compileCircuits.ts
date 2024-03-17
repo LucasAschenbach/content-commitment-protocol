@@ -1,6 +1,11 @@
 import { compile, createFileManager } from '@noir-lang/noir_wasm';
 import { CompiledCircuit } from '@noir-lang/types';
 
+import circuit_init_noir from '@/circuits/init/src/main.nr.template';
+import circuit_init_nargo from '@/circuits/init/Nargo.toml';
+
+console.log(circuit_init_noir);
+
 export async function compileCircuitInit(contentSize: number): Promise<CompiledCircuit> {
   return await compileCircuit('../circuits/init/', {
     content_size: contentSize.toString(),

@@ -101,6 +101,7 @@ export default function VideoUploader() {
     // Transform audio signal
     setProcessingState("processing");
 
+
     setOutputDetails({ duration: "01:30:00", size: "800 MB" });
 
     // Generate proof for transformation
@@ -109,6 +110,8 @@ export default function VideoUploader() {
 
     // Bundle the proof and processed audio file for download
 
+
+    setProcessingState("idle");
   };
 
   return (
