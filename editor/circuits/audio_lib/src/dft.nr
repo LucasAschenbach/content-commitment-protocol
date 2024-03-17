@@ -192,7 +192,7 @@ fn calculateRounds(size : u64) -> u64 {
     rounds
 }
 
-fn downsample<M> (data : [i64; M]) -> ([i64; M], u64){
+pub fn downsample<M> (data : [i64; M]) -> ([i64; M], u64){
     let mut res : [i64; M] = [0; M];
     let mut cmplx : [Complex; M] = [zeroC; M];
     let mut resCmplx : [Complex; M] = [zeroC; M];

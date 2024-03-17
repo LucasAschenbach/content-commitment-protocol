@@ -1,4 +1,5 @@
 use dep::std;
+use crate::dft::downsample;
 
 pub fn crop<N,M>(sound: [Field; N], start: Field, end: Field) -> pub [Field; M] {
     assert(M - 1 == end - start);
@@ -10,9 +11,8 @@ pub fn crop<N,M>(sound: [Field; N], start: Field, end: Field) -> pub [Field; M] 
     sound_new
 }
 
-pub fn compress<N,M>(sound: [Field; N], rate: Field, compression_power: Field) -> [Field; M] {
-    assert(N == M * 2.pow_32(compression_power));
+pub fn compress<N>(sound: [i64; N], rate: Field, compression_power: Field) -> ([i64; N],u64) {
+    //assert(N == M * 2.pow_32(compression_power));
     // TODO
-    let mut sound_new: [Field; M] = [0; M];
-    sound_new
+    downsample(sound)
 }
