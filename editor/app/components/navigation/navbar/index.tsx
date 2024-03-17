@@ -7,7 +7,7 @@ import { generateFromTemplate } from "@/lib/generateFromTemplate";
 const Navbar = ({ toggle }: { toggle: () => void }) => {
   return (
     <>
-      <div className="w-full h-15 bg-emerald-800 sticky top-0 p-2">
+      <div className="w-full h-15 bg-black sticky top-0 p-2">
         <div className="container mx-auto px-4 h-full">
           <div className="flex justify-between items-center h-full">
             <Logo />
@@ -30,19 +30,33 @@ const Navbar = ({ toggle }: { toggle: () => void }) => {
             </button>
             <ul className="hidden md:flex gap-x-6 text-white ">
               <li>
-                <Link href="/dashboard">
-                  <p>Dashboard</p>
-                </Link>
+                {/* <Link href="/dashboard">
+                  <p style={{ backgroundColor: "#85086E", padding: 5 }}>
+                    Go to Editor
+                  </p>
+                </Link> */}
               </li>
               <li>
-                <Link href="/about" onClick={() => generateFromTemplate('../circuits/crop/src/main.nr.template', { content_size: '10', old_content_size: '10', last_op_args: '0' })}>
-                  <p>About Us</p>
+                <Link
+                  href="/about"
+                  onClick={() =>
+                    generateFromTemplate(
+                      "../circuits/crop/src/main.nr.template",
+                      {
+                        content_size: "10",
+                        old_content_size: "10",
+                        last_op_args: "0",
+                      }
+                    )
+                  }
+                >
+                  {/* <p>About Us</p> */}
                 </Link>
               </li>
             </ul>
-            <div className="hidden md:block">
+            {/* <div className="hidden md:block">
               <Button />
-            </div>
+            </div> */}
           </div>
         </div>
       </div>
