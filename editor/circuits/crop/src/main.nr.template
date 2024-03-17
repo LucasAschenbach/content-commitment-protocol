@@ -11,9 +11,7 @@ fn main(
     com: pub Field,
     // Content Operation ---------------------
     sound_new: pub [Field; SIZE],
-    rate_new: pub Field,
     sound_old: [Field; SIZE_OLD],
-    rate_old: Field,
     // op args
     start: pub Field,
     end: pub Field,
