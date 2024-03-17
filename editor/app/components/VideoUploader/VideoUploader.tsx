@@ -1,22 +1,15 @@
 import React, { useEffect, useRef, useState } from "react";
 import styles from "./VideoUploader.module.css";
-import { BarretenbergBackend } from "@noir-lang/backend_barretenberg";
-import { Noir } from "@noir-lang/noir_js";
-import {
-  compileCircuitCompress,
-  compileCircuitCrop,
-  compileCircuitInit,
-} from "@/lib/compileCircuits";
-import opsDB from "@/circuits/ops_db.json";
+import { BarretenbergBackend } from '@noir-lang/backend_barretenberg';
+import { Noir } from '@noir-lang/noir_js';
+import { compileCircuitCompress, compileCircuitCompressReturn, compileCircuitCrop, compileCircuitInit } from "@/lib/compileCircuits";
+import opsDB from '@/circuits/ops_db.json';
 const WaveFile = require("wavefile").WaveFile;
-import circuit_init_noir from "@/circuits/init/src/main.nr.template";
-
-console.log(circuit_init_noir);
 
 type ProofDataScheme = {
   commitment: string;
   proof: string;
-  ops: { descriptor: string; args: { [key: string]: number }[] }[];
+  ops: { descriptor: string; args: number[] }[];
 };
 
 export default function VideoUploader() {
@@ -24,7 +17,7 @@ export default function VideoUploader() {
   const [startTime, setStartTime] = useState(0);
   const [endTime, setEndTime] = useState(0);
   const [bitrate, setBitrate] = useState(96);
-  const [compressCheck, setCompressCheck] = useState(false);
+  const [didCompress, setDidCompress] = useState(false);
   const [outputDetails, setOutputDetails] = useState({
     duration: "00:00:00",
     size: "0 MB",
@@ -114,7 +107,41 @@ export default function VideoUploader() {
     (fileSize / (1024 * 1024)).toFixed(2);
 
   // Placeholder function for processing audio
-  const processAudio = () => {};
+  const generateInitialProof = async () => {
+    const audioPCM = new Int16Array(pcmData!);
+
+    const circuitInitReturn = await compileCircuitCompressReturn(
+      audioPCM.length
+    );
+    const backendInitReturn = new BarretenbergBackend(circuitInitReturn);
+    const noirInitReturn = new Noir(circuitInitReturn, backendInitReturn);
+
+    const res = await noirInitReturn.execute({
+      sound: Array.from(audioPCM),
+    });
+
+    const com = res.returnValue as string;
+
+    backendInitReturn.destroy();
+    noirInitReturn.destroy();
+
+    const circuitInit = await compileCircuitInit(audioPCM.length);
+    const backendInit = new BarretenbergBackend(circuitInitReturn);
+    const noirInit = new Noir(circuitInit, backendInit);
+
+    const { proof: initProof, publicInputs: initPublicInputs } = await noirInit.generateProof({
+      com: com,
+      sound: Array.from(audioPCM),
+    });
+
+    const proofData: ProofDataScheme = {
+      commitment: com,
+      proof: Buffer.from(initProof).toString('hex'),
+      ops: [{ descriptor: "init", args: [] }],
+    };
+
+    setproofData(JSON.stringify(proofData));
+  };
 
   // This function would provide the processed audio file to the user for download
   const downloadAudio = async () => {
@@ -123,30 +150,31 @@ export default function VideoUploader() {
     setProcessingState("processing");
 
     const samplingRate = bitrate * 1000;
-    const startSample = startTime * samplingRate;
-    const endSample = endTime * samplingRate;
+    const startIndex = startTime * samplingRate;
+    const endIndex = endTime * samplingRate;
 
-    var afterCropAudioPCM = new Int16Array(pcmData);
+    const audioPCM = new Int16Array(pcmData!);
+    let afterCropAudioPCM = audioPCM;
 
     if (
-      startSample < afterCropAudioPCM!.length &&
-      endSample < afterCropAudioPCM.length &&
-      startSample < endSample
+      startIndex < audioPCM!.length &&
+      endIndex < audioPCM.length &&
+      startIndex < endIndex
     ) {
-      afterCropAudioPCM = afterCropAudioPCM.slice(startSample, endSample); //remove end part
+      afterCropAudioPCM = audioPCM.slice(startIndex, endIndex); //remove end part
     }
     const dur = afterCropAudioPCM.length / samplingRate;
     const durStr = new Date(dur * 1000).toISOString().substring(11, 16);
     var resultAudio = afterCropAudioPCM;
-    if (compressCheck) {
+    if (didCompress) {
       //check if compression will be applied
-      const compiledCircuit = await compileCircuitCompressReturn(
+      const circuitCompressionReturn = await compileCircuitCompressReturn(
         afterCropAudioPCM.length
       );
-      const pedersenBackend = new BarretenbergBackend(compiledCircuit);
-      const pedersenNoir = new Noir(compiledCircuit, pedersenBackend);
+      const backendCompressionReturn = new BarretenbergBackend(circuitCompressionReturn);
+      const noirCompressionReturn = new Noir(circuitCompressionReturn, backendCompressionReturn);
 
-      const res = await pedersenNoir.execute({
+      const res = await noirCompressionReturn.execute({
         sound: Array.from(afterCropAudioPCM),
       });
 
@@ -156,25 +184,25 @@ export default function VideoUploader() {
 
       // afterSamplingAudioPCM = afterSamplingAudioPCM.slice(0, trackLen);
       // resultAudio = new Int16Array(afterSamplingAudioPCM);
-    }
 
-    //pedersenNoir.destroy();
-    //pedersenBackend.destroy();
+      backendCompressionReturn.destroy();
+      noirCompressionReturn.destroy();
+    }
 
     setOutputDetails({ duration: durStr, size: "800 MB" });
 
     // Generate proof for transformation
     setProcessingState("proving");
 
-    const proofDataJson = JSON.parse(proofData);
+    const proofDataJson = JSON.parse(proofData) as ProofDataScheme;
     const com = proofDataJson.commitment;
     const prevProof = Uint8Array.from(Buffer.from(proofDataJson.proof, "hex"));
     const lastOp = proofDataJson.ops[proofDataJson.ops.length - 1];
 
-    // mock data
-    const didCompress = true;
-    const sound = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
-    const soundCrop = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+    // data for proof generation
+    setDidCompress(false);
+    const sound = audioPCM;
+    const soundCrop = afterCropAudioPCM;
     const soundCompress = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
     const contentSize = sound.length;
     const contentSizeCrop = soundCrop.length;
@@ -254,20 +282,17 @@ export default function VideoUploader() {
       { proof: prevProof, publicInputs: prevPublicInputs },
       lastOpArgsLength
     );
-
-    const { proof: cropProof, publicInputs: cropPublicInputs } =
-      await noirPrograms.crop.generateProof({
-        inputs: {
-          com: com,
-          sound_new: soundCrop,
-          sound_old: sound,
-          start: startIndex,
-          end: endIndex,
-          verification_key: cropVkAsFields,
-          proof: cropProofAsFields,
-          vk_hash: cropVkHash,
-        },
-      });
+  
+    const { proof: cropProof, publicInputs: cropPublicInputs } = await noirPrograms.crop.generateProof({ inputs: {
+      com: com,
+      sound_new: Array.from(soundCrop),
+      sound_old: Array.from(sound),
+      start: startIndex,
+      end: endIndex,
+      verification_key: cropVkAsFields,
+      proof: cropProofAsFields,
+      vk_hash: cropVkHash,
+    }});
 
     // 2. Prove compress ----------------------------
 
@@ -283,18 +308,15 @@ export default function VideoUploader() {
         { proof: cropProof, publicInputs: cropPublicInputs },
         2 // crop has 2 op args
       );
-
-      const { proof: compressProof, publicInputs: compressPublicInputs } =
-        await noirPrograms.crop.generateProof({
-          inputs: {
-            com: com,
-            sound_new: soundCrop,
-            sound_old: sound,
-            verification_key: compressVkAsFields,
-            proof: cropProofAsFields,
-            vk_hash: cropVkHash,
-          },
-        });
+    
+      const { proof: compressProof, publicInputs: compressPublicInputs } = await noirPrograms.crop.generateProof({ inputs: {
+        com: com,
+        sound_new: Array.from(soundCompress),
+        sound_old: Array.from(soundCrop),
+        verification_key: compressVkAsFields,
+        proof: cropProofAsFields,
+        vk_hash: cropVkHash,
+      }});
 
       // Create new proof data object
       proofDataNew = {
@@ -318,7 +340,7 @@ export default function VideoUploader() {
       };
     }
 
-    //
+    console.log(proofDataNew);
 
     setProcessingState("idle");
   };
@@ -418,8 +440,8 @@ export default function VideoUploader() {
           <input
             type="checkbox"
             id="bitrateCheckbox"
-            checked={compressCheck === true}
-            onChange={() => setCompressCheck(!compressCheck)}
+            checked={didCompress === true}
+            onChange={() => setDidCompress(!didCompress)}
           />
           <label htmlFor="bitrateCheckbox">Downsample Bitrate (in KHz)</label>
         </div>
