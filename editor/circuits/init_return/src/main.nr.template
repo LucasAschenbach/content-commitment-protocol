@@ -1,6 +1,6 @@
 use dep::std;
 
-global SIZE = 10000;
+global SIZE = <%= content_size %>;
 
 fn main(sound: [Field; SIZE]) -> pub Field {
     let com = std::hash::pedersen_hash(sound);

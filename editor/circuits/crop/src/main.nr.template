@@ -41,10 +41,13 @@ fn main(
         key_hash,
     );
 
-    assert(rate_new == rate_old);
-
     // Verify new sound is proper crop of old sound
-    crop(sound_old, sound_new, start, end);
+    assert(rate_new == rate_old);
+    assert(SIZE - 1 == end - start);
+    let len: u32 = SIZE as u32;
+    for i in 0..(len-1) {
+        assert(sound_new[i] == sound_old[start + i as Field]);
+    }
 }
 
 #[test]
