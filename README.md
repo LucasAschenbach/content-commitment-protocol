@@ -8,7 +8,7 @@ Our main goal is to deliver a seemless but secure solution for data signatures t
 
 ## **The Architecture**
 ![IMG_0216](https://github.com/LucasAschenbach/content-commitment-protocol/assets/158106595/7c0ee3c7-2abf-49c9-8857-ab4e3ca1fda3)
-At it's core, zertify uses a commitment(C) that connects the signature to the signed piece of data. 
+At it's core, Zertify uses a commitment(C) that connects the signature to the signed piece of data. 
 
 The commitment is generated from the original piece of data(c<sub>0</sub>). Along with the proof(𝞹) there will always be a record of the operations(phi) that have been performed with the piece of data. introducing one of our advanced safety feature.
 
