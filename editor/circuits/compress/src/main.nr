@@ -5,6 +5,7 @@ global SIZE = 100; // size of the sound array
 global SIZE_OLD = 100; // size of the old sound array
 global LAST_OP_ARGS = 0; // size of the previous operation arguments
 
+#[recursive]
 fn main(
     // Commitment ----------------------------
     com: pub Field,
