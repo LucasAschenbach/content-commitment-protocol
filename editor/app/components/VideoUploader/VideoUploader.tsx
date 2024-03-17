@@ -1,12 +1,19 @@
 import React, { useEffect, useRef, useState } from "react";
 import styles from "./VideoUploader.module.css";
-import { BarretenbergBackend } from "@noir-lang/backend_barretenberg";
-import { Noir } from "@noir-lang/noir_js";
-import { compileCircuitCompressReturn } from "@/lib/compileCircuits";
+import { BarretenbergBackend } from '@noir-lang/backend_barretenberg';
+import { Noir } from '@noir-lang/noir_js';
+import { compileCircuitCompress, compileCircuitCrop, compileCircuitInit } from "@/lib/compileCircuits";
+import opsDB from '@/circuits/ops_db.json';
 const WaveFile = require("wavefile").WaveFile;
 import circuit_init_noir from "@/circuits/init/src/main.nr.template";
 
 console.log(circuit_init_noir);
+
+type ProofDataScheme = {
+  commitment: string;
+  proof: string;
+  ops: { descriptor: string; args: { [key: string]: number }[] }[];
+};
 
 export default function VideoUploader() {
   const [startTime, setStartTime] = useState(0);
@@ -17,7 +24,7 @@ export default function VideoUploader() {
     duration: "00:00:00",
     size: "0 MB",
   });
-  const [proof, setProof] = useState("");
+  const [proofData, setproofData] = useState("");
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [pcmData, setPcmData] = useState<ArrayBuffer | null>(null);
@@ -151,7 +158,115 @@ export default function VideoUploader() {
     // Generate proof for transformation
     setProcessingState("proving");
 
-    // Bundle the proof and processed audio file for download
+    const proofDataJson = JSON.parse(proofData);
+    const com = proofDataJson.commitment;
+    const prevProof = Uint8Array.from(Buffer.from(proofDataJson.proof, 'hex'));
+    const lastOp = proofDataJson.ops[proofDataJson.ops.length - 1];
+
+    // mock data
+    const didCompress = true;
+    const sound = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+    const soundCrop = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+    const soundCompress = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+    const contentSize = sound.length;
+    const contentSizeCrop = soundCrop.length;
+    const contentSizeCompress = soundCompress.length;
+    const lastOpArgsLength = Object.keys(opsDB[lastOp.descriptor as keyof typeof opsDB].args).length;
+
+    // Create circuit
+    const circuitPrev = await (async () => {
+      switch (lastOp.descriptor as keyof typeof opsDB) {
+        case "init": return compileCircuitInit(contentSize);
+        case "crop": return compileCircuitCrop(contentSizeCrop, contentSize, lastOpArgsLength);
+        case "compress": return compileCircuitCompress(contentSizeCompress, contentSizeCrop, lastOpArgsLength);
+      }
+    })();
+    const circuitCrop = await compileCircuitCrop(contentSizeCrop, contentSize, lastOpArgsLength);
+    const circuitCompress = await compileCircuitCompress(contentSizeCompress, contentSizeCrop, lastOpArgsLength);
+
+    const circuits = {
+      prev: circuitPrev,
+      crop: circuitCrop,
+      compress: circuitCompress,
+    }
+
+    const backends = {
+      prev: new BarretenbergBackend(circuits.prev, { threads: navigator.hardwareConcurrency }),
+      crop: new BarretenbergBackend(circuits.crop, { threads: navigator.hardwareConcurrency }),
+      compress: new BarretenbergBackend(circuits.compress, { threads: navigator.hardwareConcurrency }),
+    }
+
+    const noirPrograms = {
+      prev: new Noir(circuits.prev, backends.prev),
+      crop: new Noir(circuits.crop, backends.crop),
+      compress: new Noir(circuits.compress, backends.compress),
+    }
+
+
+    // 1. Prove crop --------------------------------
+
+    const prevPublicInputs = [com, sound, ...lastOp.args.map((arg: any) => arg.toString())];
+
+    // backends.prev.verifyProof({ proof: prevProof, publicInputs: publicInputs });
+    const { proofAsFields: cropProofAsFields, vkAsFields: cropVkAsFields, vkHash: cropVkHash } = await backends.prev.generateRecursiveProofArtifacts(
+      { proof: prevProof, publicInputs: prevPublicInputs },
+      lastOpArgsLength,
+    );
+  
+    const { proof: cropProof, publicInputs: cropPublicInputs } = await noirPrograms.crop.generateProof({ inputs: {
+      com: com,
+      sound_new: soundCrop,
+      sound_old: sound,
+      start: startIndex,
+      end: endIndex,
+      verification_key: cropVkAsFields,
+      proof: cropProofAsFields,
+      vk_hash: cropVkHash,
+    }});
+
+    // 2. Prove compress ----------------------------
+
+    let proofDataNew: ProofDataScheme;
+
+    if (didCompress) {
+      // backends.crop.verifyProof({ proof: cropProof, publicInputs: cropPublicInputs });
+      const { proofAsFields: compressProofAsFields, vkAsFields: compressVkAsFields, vkHash: compressVkHash } = await backends.prev.generateRecursiveProofArtifacts(
+        { proof: cropProof, publicInputs: cropPublicInputs },
+        2, // crop has 2 op args
+      );
+    
+      const { proof: compressProof, publicInputs: compressPublicInputs } = await noirPrograms.crop.generateProof({ inputs: {
+        com: com,
+        sound_new: soundCrop,
+        sound_old: sound,
+        verification_key: compressVkAsFields,
+        proof: cropProofAsFields,
+        vk_hash: cropVkHash,
+      }});
+
+      // Create new proof data object
+      proofDataNew = {
+        commitment: com,
+        proof: Buffer.from(compressProof).toString('hex'),
+        ops: [
+          ...proofDataJson.ops,
+          { descriptor: "crop", args: [startIndex, endIndex] },
+          { descriptor: "compress", args: [] },
+        ],
+      };
+    } else {
+      // Create new proof data object
+      proofDataNew = {
+        commitment: com,
+        proof: Buffer.from(cropProof).toString('hex'),
+        ops: [
+          ...proofDataJson.ops,
+          { descriptor: "crop", args: [startIndex, endIndex] },
+        ],
+      };
+    }
+
+    // 
 
     setProcessingState("idle");
   };
@@ -190,7 +305,7 @@ export default function VideoUploader() {
             readOnly
             className={styles.proofField}
             placeholder="Computational proof of the video will be displayed here after upload."
-            value={proof}
+            value={proofData}
           />
         </div>
       </div>

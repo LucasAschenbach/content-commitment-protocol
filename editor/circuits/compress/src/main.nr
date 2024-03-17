@@ -5,16 +5,15 @@ global SIZE = 100; // size of the sound array
 global SIZE_OLD = 100; // size of the old sound array
 global LAST_OP_ARGS = 0; // size of the previous operation arguments
 
+#[recursive]
 fn main(
     // Commitment ----------------------------
     com: pub Field,
     // Content Operation ---------------------
-    sound_new: pub [Field; SIZE],
-    rate_new: pub Field,
-    sound_old: [Field; SIZE_OLD],
-    rate_old: Field,
+    sound_new: pub [i64; SIZE],
+    sound_old: [i64; SIZE_OLD],
     // op args
-    compression_power: Field,
+    // compression_power: Field,
     // Previous proof data  ------------------
     verification_key : [Field; 114],
     proof : [Field; 93],

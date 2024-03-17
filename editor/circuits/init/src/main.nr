@@ -2,6 +2,7 @@ use dep::std;
 
 global SIZE = 10000;
 
+#[recursive]
 fn main(com: pub Field, sound: [Field; SIZE]) {
     let com_test = std::hash::pedersen_hash(sound);
     assert(com == com_test);
