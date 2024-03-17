@@ -1,3 +1,5 @@
+"use client"
+
 import React, { useEffect } from "react";
 import Link from "next/link";
 import initNoirC from '@noir-lang/noirc_abi';
