@@ -1,5 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import styles from "./VideoUploader.module.css";
+import { BarretenbergBackend } from '@noir-lang/backend_barretenberg';
+import { Noir } from '@noir-lang/noir_js';
+import { compileCircuitCompressReturn } from "@/lib/compileCircuits";
 const WaveFile = require("wavefile").WaveFile;
 
 export default function VideoUploader() {
@@ -100,6 +103,25 @@ export default function VideoUploader() {
   const downloadAudio = async () => {
     // Transform audio signal
     setProcessingState("processing");
+    var afterCropAudioPCM = pcmData
+    afterCropAudioPCM.splice(endTime,pcmData.length - endTime) //remove end part
+    afterCropAudioPCM.splice(0,startTime) //remove start part
+    var resultAudio = afterCropAudioPCM
+    if(compressCheck){ //check if compression will be applied
+      const compiledCircuit = compileCircuitCompressReturn(afterCropAudioPCM.length)
+      const pedersenBackend = new BarretenbergBackend(compiledCircuit);
+      const pedersenNoir = new Noir(compiledCircuit, pedersenBackend);
+  
+      const res = await pedersenNoir.execute({sound : afterCropAudioPCM});
+  
+      var [afterSamplingAudioPCM, trackLen] = res.returnValue
+      afterSamplingAudioPCM.splice(trackLen,afterSamplingAudioPCM.length - trackLen)
+      resultAudio = afterSamplingAudioPCM
+    }
+  
+    //pedersenNoir.destroy();
+    //pedersenBackend.destroy();
+
 
     setOutputDetails({ duration: "01:30:00", size: "800 MB" });
 
